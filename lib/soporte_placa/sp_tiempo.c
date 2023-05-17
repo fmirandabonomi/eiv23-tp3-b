@@ -46,7 +46,7 @@ void SP_Tiempo_delay(uint32_t tiempo){
 typedef struct SP_TimeoutDescriptor{
     uint32_t volatile tiempo;
     SP_TimeoutHandler volatile handler;
-    void *volatile  param;
+    void volatile *volatile  param;
 } SP_TimeoutDescriptor;
 
 SP_TimeoutDescriptor timeoutDescriptors[SP_MAX_TIMEOUTS];
