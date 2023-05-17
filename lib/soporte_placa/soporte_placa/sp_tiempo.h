@@ -31,6 +31,7 @@ typedef void (*SP_TimeoutHandler)(void *param);
  */
 bool SP_Timeout(uint32_t tiempo,SP_TimeoutHandler handler,void *param);
 
+void SP_Tiempo_init(void);
 
 #endif
 
