@@ -46,6 +46,8 @@ void tearDown(){
 static void test_config_salida(void){
     enum{BITS_MODO_ALGUNO_HIGH = 0b0011,
          BITS_MODO_LOW = 0b1100};
+    SP_Pin_setModo(SP_PB9,SP_PIN_ENTRADA);
+    resetDeltaRegs();
     SP_Pin_setModo(SP_PB9,SP_PIN_SALIDA);
     bool const GPIOB_ON = RCC->APB2ENR & RCC_APB2ENR_IOPBEN;
     
@@ -64,6 +66,8 @@ static void test_config_salidaOpenDrain(void){
     enum{BITS_MODO_ALGUNO_HIGH = 0b0011,
          BITS_CFG = 0b1100,
          BITS_CFG_ESPERADO = 0b0100};
+    SP_Pin_setModo(SP_PB9,SP_PIN_ENTRADA);
+    resetDeltaRegs();
     SP_Pin_setModo(SP_PB9,SP_PIN_SALIDA_OPEN_DRAIN);
     bool const GPIOB_ON = RCC->APB2ENR & RCC_APB2ENR_IOPBEN;
     
@@ -80,6 +84,8 @@ static void test_config_salidaOpenDrain(void){
 }
 static void test_config_entrada(void){
     enum{MODO_ESPERADO = 0b0100};
+    SP_Pin_setModo(SP_PB9,SP_PIN_SALIDA);
+    resetDeltaRegs();
     SP_Pin_setModo(SP_PB9,SP_PIN_ENTRADA);
     bool const GPIOB_ON = RCC->APB2ENR & RCC_APB2ENR_IOPBEN;
 
@@ -96,6 +102,8 @@ static void test_config_entrada(void){
 
 static void test_config_entradaPullUp(void){
     enum{MODO_ESPERADO = 0b1000};
+    SP_Pin_setModo(SP_PB9,SP_PIN_ENTRADA);
+    resetDeltaRegs();
     SP_Pin_setModo(SP_PB9,SP_PIN_ENTRADA_PULLUP);
     bool const GPIOB_ON = RCC->APB2ENR & RCC_APB2ENR_IOPBEN;
 
@@ -183,6 +191,24 @@ static void test_read_0(void){
     TEST_ASSERT_FALSE(valor_0);
 }
 
+static void test_pinesJtag(void){
+    static SP_HPin const pinesJtag[] = {SP_PA15,SP_PB3,SP_PB4};
+    static size_t const NUM_PINES_JTAG = sizeof(pinesJtag)/sizeof(*pinesJtag);
+    for(int i=0;i<NUM_PINES_JTAG;++i){
+        SP_HPin const hPin = pinesJtag[i];
+        SP_Pin_setModo(hPin,SP_PIN_SALIDA);
+        SP_Pin_write(hPin,0);
+        SP_Pin_setModo(hPin,SP_PIN_ENTRADA);
+        bool const valor_0 = SP_Pin_read(hPin);
+        SP_Pin_setModo(hPin,SP_PIN_SALIDA);
+        SP_Pin_write(hPin,1);
+        SP_Pin_setModo(hPin,SP_PIN_ENTRADA);
+        bool const valor_1 = SP_Pin_read(hPin);
+        TEST_ASSERT_FALSE(valor_0);
+        TEST_ASSERT_TRUE(valor_1);
+    }
+}
+
 int main(void){
     SP_init();
     for(unsigned volatile i=0;i<(8000000/13)/2;++i);
@@ -196,6 +222,7 @@ int main(void){
     RUN_TEST(test_write_1);
     RUN_TEST(test_read_1);
     RUN_TEST(test_read_0);
+    RUN_TEST(test_pinesJtag);
     UNITY_END();
     return 0;
 }
