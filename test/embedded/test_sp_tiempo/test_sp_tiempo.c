@@ -93,6 +93,78 @@ static void test_SP_delay_10ms_iniciaDespuesMediaCuenta(void){
     TEST_ASSERT_EQUAL_UINT32(10,tiempo);
 }
 
+static void test_SP_Tiempo_getMilisegundos(void){
+    uint32_t const ciclos_por_ms = SystemCoreClock/1000;
+    CycleCounter_resetValue();
+    uint32_t const cuentaInicial = SP_Tiempo_getMilisegundos();
+    for(uint32_t volatile i =0;i<ciclos_por_ms*10;++i);
+    uint32_t const esperado = CycleCounter_getValue_ms();
+    uint32_t const obtenido = SP_Tiempo_getMilisegundos()-cuentaInicial;
+    TEST_ASSERT_LESS_OR_EQUAL_UINT32(esperado+1,obtenido);
+    TEST_ASSERT_GREATER_OR_EQUAL_UINT32(esperado-1,obtenido);
+}
+
+static struct Acumuladores {uint32_t a[4];} volatile acumuladores;
+
+static void Acumuladores_init(void){
+    uint32_t const t0 = SP_Tiempo_getMilisegundos();
+    size_t NUM_ACUMULADORES =sizeof(acumuladores.a)/sizeof(acumuladores.a[0]);
+    for(size_t i = 0;i<NUM_ACUMULADORES;++i)
+        acumuladores.a[i]=t0;
+}
+static void marca_tiempo(void *int_acum){
+    uint32_t volatile *const a = int_acum;
+    *a = SP_Tiempo_getMilisegundos() - *a;
+}
+
+static void test_un_timeout(void){
+    Acumuladores_init();
+    bool const aceptado = SP_Tiempo_addTimeout(100,marca_tiempo,acumuladores.a);
+    TEST_ASSERT_TRUE(aceptado);
+    SP_Tiempo_delay(100);
+    TEST_ASSERT_EQUAL_UINT32(100,acumuladores.a[0]);
+}
+
+static void test_varios_timeouts(void){
+    Acumuladores_init();
+    bool aceptado;
+    aceptado = SP_Tiempo_addTimeout(100,marca_tiempo,acumuladores.a+3);
+    TEST_ASSERT_TRUE(aceptado);
+    aceptado = SP_Tiempo_addTimeout(30,marca_tiempo,acumuladores.a+0);
+    TEST_ASSERT_TRUE(aceptado);
+    aceptado = SP_Tiempo_addTimeout(150,marca_tiempo,acumuladores.a+1);
+    TEST_ASSERT_TRUE(aceptado);
+    aceptado = SP_Tiempo_addTimeout(73,marca_tiempo,acumuladores.a+2);
+    TEST_ASSERT_TRUE(aceptado);
+
+    SP_Tiempo_delay(150);
+    TEST_ASSERT_EQUAL_UINT32(30,acumuladores.a[0]);
+    TEST_ASSERT_EQUAL_UINT32(150,acumuladores.a[1]);
+    TEST_ASSERT_EQUAL_UINT32(73,acumuladores.a[2]);
+    TEST_ASSERT_EQUAL_UINT32(100,acumuladores.a[3]);
+
+}
+
+static void test_varios_timeouts_iguales(void){
+    Acumuladores_init();
+    bool aceptado;
+    aceptado = SP_Tiempo_addTimeout(30,marca_tiempo,acumuladores.a+3);
+    TEST_ASSERT_TRUE(aceptado);
+    aceptado = SP_Tiempo_addTimeout(30,marca_tiempo,acumuladores.a+0);
+    TEST_ASSERT_TRUE(aceptado);
+    aceptado = SP_Tiempo_addTimeout(30,marca_tiempo,acumuladores.a+1);
+    TEST_ASSERT_TRUE(aceptado);
+    aceptado = SP_Tiempo_addTimeout(30,marca_tiempo,acumuladores.a+2);
+    TEST_ASSERT_TRUE(aceptado);
+
+    SP_Tiempo_delay(30);
+    TEST_ASSERT_EQUAL_UINT32(30,acumuladores.a[0]);
+    TEST_ASSERT_EQUAL_UINT32(30,acumuladores.a[1]);
+    TEST_ASSERT_EQUAL_UINT32(30,acumuladores.a[2]);
+    TEST_ASSERT_EQUAL_UINT32(30,acumuladores.a[3]);
+
+}
+
 int main(void){
     SP_init();
     SP_Tiempo_delay(500);
@@ -103,6 +175,10 @@ int main(void){
     RUN_TEST(test_SP_delay_10ms_iniciaAntesMediaCuenta);
     RUN_TEST(test_SP_delay_10ms_iniciaMediaCuenta);
     RUN_TEST(test_SP_delay_10ms_iniciaDespuesMediaCuenta);
+    RUN_TEST(test_SP_Tiempo_getMilisegundos);
+    RUN_TEST(test_un_timeout);
+    RUN_TEST(test_varios_timeouts);
+    RUN_TEST(test_varios_timeouts_iguales);
     CycleCounter_deinit();
     UNITY_END();
     return 0;

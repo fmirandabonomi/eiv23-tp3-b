@@ -19,17 +19,22 @@ void SP_Tiempo_delay(uint32_t tiempo);
 typedef void (*SP_TimeoutHandler)(void *param);
 
 /**
- * @brief Llama a la función handler desde la rutina de servicio
- * de interrupción de SysTick luego de pasado el tiempo en milisegundos,
- * con el parámetro especificado.
+ * @brief Programa un evento de timeout. Al cumplirse el tiempo 
+ * especificado la rutina de servicio de interrupción de SysTick 
+ * hará un llamado al handler especificado (EL LLAMADO OCURRE EN
+ * MODO HANDLER)
  * 
- * @param tiempo Tiempo en milisegundos
- * @param handler Puntero a función handler
- * @param param Parámetro a pasar como argumento de la función handler (puntero void)
- * @return true Timeout programado
- * @return false Recursos insuficientes
+ * @param tiempo Tiempo en milisegundos a partir del cual hacer
+ * el llamado. Mayor que cero.
+ * @param handler Puntero a función handler, que no retorna valor
+ * y recibe un parámetro puntero sin tipo (void *)
+ * @param param Parámetro puntero sin tipo que será utilizado en
+ * el llamado al handler
+ * @return true Evento programado
+ * @return false Falló la programación del evento (posiblemente por
+ * falta de recursos)
  */
-bool SP_Tiempo_registraTimeout(uint32_t tiempo,SP_TimeoutHandler handler,void *param);
+bool SP_Tiempo_addTimeout(uint32_t tiempo,SP_TimeoutHandler handler,void *param);
 
 void SP_Tiempo_init(void);
 
