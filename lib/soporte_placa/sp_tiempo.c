@@ -12,6 +12,7 @@
  * 
  */
 static uint32_t volatile ticks;
+static uint32_t limiteRedondeo;
 
 void SP_Tiempo_init(void){
     // Ver documentación CMSIS
@@ -23,11 +24,13 @@ void SP_Tiempo_init(void){
 
     // https://arm-software.github.io/CMSIS_5/Core/html/group__SysTick__gr.html#gabe47de40e9b0ad465b752297a9d9f427
     SysTick_Config(cuentas_por_milisgundo); // Configura SysTick y la interrupción
+    limiteRedondeo = (SysTick->LOAD+1)/2;
 }
 
-void SP_delay(uint32_t tiempo){
+void SP_Tiempo_delay(uint32_t tiempo){
     uint32_t const ticks_inicial = ticks;
     uint32_t tiempo_transcurrido = ticks - ticks_inicial;
+    if (tiempo < UINT32_MAX && SysTick->VAL < limiteRedondeo) ++tiempo; // Redondeo
     while(tiempo_transcurrido < tiempo){
         // https://arm-software.github.io/CMSIS_5/Core/html/group__intrinsic__CPU__gr.html#gaed91dfbf3d7d7b7fba8d912fcbeaad88
         __WFI();
@@ -49,7 +52,7 @@ typedef struct SP_TimeoutDescriptor{
 SP_TimeoutDescriptor timeoutDescriptors[SP_MAX_TIMEOUTS];
 
 
-bool SP_Timeout(uint32_t const tiempo,SP_TimeoutHandler const handler,void *const param){
+bool SP_Tiempo_registraTimeout(uint32_t const tiempo,SP_TimeoutHandler const handler,void *const param){
     bool hecho = false;
     __disable_irq();
     for(size_t i=0;i<SP_MAX_TIMEOUTS;++i){
@@ -80,4 +83,8 @@ static void procesaTimeouts(void){
 void SysTick_Handler(void){
     ++ticks;
     procesaTimeouts();
+}
+
+uint32_t SP_Tiempo_getMilisegundos(void){
+    return ticks;
 }

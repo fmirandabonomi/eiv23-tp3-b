@@ -14,7 +14,7 @@ int main(void){
     for (;;){
         while(SP_Pin_read(SP_PB9) != PULSADOR_ACTIVO);
         SP_Pin_write(SP_LED,LUZ_ON);
-        SP_delay(60000);
+        SP_Tiempo_delay(60000);
         SP_Pin_write(SP_LED,LUZ_OFF);
     }
     return 0;
