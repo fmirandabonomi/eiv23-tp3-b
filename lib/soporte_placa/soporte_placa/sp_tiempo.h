@@ -16,7 +16,7 @@ void SysTick_Handler(void);
  */
 void SP_Tiempo_delay(uint32_t tiempo);
 
-typedef void (*SP_TimeoutHandler)(void *param);
+typedef void (*SP_TimeoutHandler)(void volatile *param);
 
 /**
  * @brief Programa un evento de timeout. Al cumplirse el tiempo 
@@ -34,7 +34,7 @@ typedef void (*SP_TimeoutHandler)(void *param);
  * @return false Falló la programación del evento (posiblemente por
  * falta de recursos)
  */
-bool SP_Tiempo_addTimeout(uint32_t tiempo,SP_TimeoutHandler handler,void *param);
+bool SP_Tiempo_addTimeout(uint32_t tiempo,SP_TimeoutHandler handler,void volatile *param);
 
 void SP_Tiempo_init(void);
 

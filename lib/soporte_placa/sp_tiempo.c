@@ -52,7 +52,7 @@ typedef struct SP_TimeoutDescriptor{
 SP_TimeoutDescriptor timeoutDescriptors[SP_MAX_TIMEOUTS];
 
 
-bool SP_Tiempo_addTimeout(uint32_t const tiempo,SP_TimeoutHandler const handler,void *const param){
+bool SP_Tiempo_addTimeout(uint32_t const tiempo,SP_TimeoutHandler const handler,void volatile *const param){
     bool hecho = false;
     __disable_irq();
     for(size_t i=0;i<SP_MAX_TIMEOUTS;++i){

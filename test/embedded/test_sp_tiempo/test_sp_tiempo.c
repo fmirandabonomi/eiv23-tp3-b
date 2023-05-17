@@ -112,7 +112,7 @@ static void Acumuladores_init(void){
     for(size_t i = 0;i<NUM_ACUMULADORES;++i)
         acumuladores.a[i]=t0;
 }
-static void marca_tiempo(void *int_acum){
+static void marca_tiempo(void volatile *int_acum){
     uint32_t volatile *const a = int_acum;
     *a = SP_Tiempo_getMilisegundos() - *a;
 }
