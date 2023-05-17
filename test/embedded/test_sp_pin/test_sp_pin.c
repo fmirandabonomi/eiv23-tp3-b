@@ -194,7 +194,7 @@ static void test_read_0(void){
 static void test_pinesJtag(void){
     static SP_HPin const pinesJtag[] = {SP_PA15,SP_PB3,SP_PB4};
     static size_t const NUM_PINES_JTAG = sizeof(pinesJtag)/sizeof(*pinesJtag);
-    for(int i=0;i<NUM_PINES_JTAG;++i){
+    for(size_t i=0;i<NUM_PINES_JTAG;++i){
         SP_HPin const hPin = pinesJtag[i];
         SP_Pin_setModo(hPin,SP_PIN_SALIDA);
         SP_Pin_write(hPin,0);
