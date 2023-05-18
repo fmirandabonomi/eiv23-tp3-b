@@ -54,7 +54,7 @@ enum SP_PinesEspecial{
  * @brief Handle que representa un objeto Pin.
  * Toma valores de las constantes SP_Pines
  */
-typedef int SP_HPin;
+typedef unsigned SP_HPin;
 
 /**
  * @brief Definición de modo de operación de un Pin

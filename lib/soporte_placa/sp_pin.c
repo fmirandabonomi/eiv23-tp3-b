@@ -135,10 +135,10 @@ void SP_Pin_setModo(SP_HPin hPin,SP_Pin_Modo modo){
         config_modo(pin,ENTRADA_FLOTANTE);
     break;case SP_PIN_ENTRADA_PULLUP:
         config_modo(pin,ENTRADA_PULLUP_PULLDN);
-        pin->puerto->BSRR = 1 << pin->nrPin;
+        SP_Pin_write(hPin,1);
     break;case SP_PIN_ENTRADA_PULLDN:
         config_modo(pin,ENTRADA_PULLUP_PULLDN);
-        pin->puerto->BRR = 1 << pin->nrPin;
+        SP_Pin_write(hPin,0);
     break;case SP_PIN_SALIDA:
         config_modo(pin,SALIDA_2MHz);
     break;case SP_PIN_SALIDA_OPEN_DRAIN:

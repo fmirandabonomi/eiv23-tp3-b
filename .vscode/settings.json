@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "unity.h": "c",
-        "unity_internals.h": "c"
+        "unity_internals.h": "c",
+        "sp_pin.h": "c"
     }
 }
