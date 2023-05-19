@@ -120,7 +120,7 @@ static void test_config_entradaPullUp(void){
     TEST_ASSERT_BIT_HIGH(BIT_ODR,ODR);
 }
 
-static void test_config_entradaPullDown(void){
+static void test_SP_Pin_setModo__SP_PIN_ENTRADA_PULLDN__DEBE_configurar_pin_como_ENTRADA_con_PULL_DOWN_INTERNO(void){
     enum{MODO_ESPERADO = 0b1000};
     SP_Pin_setModo(SP_PB9,SP_PIN_ENTRADA_PULLDN);
     bool const GPIOB_ON = RCC->APB2ENR & RCC_APB2ENR_IOPBEN;
@@ -137,7 +137,7 @@ static void test_config_entradaPullDown(void){
     TEST_ASSERT_BIT_LOW(BIT_ODR,ODR);
 }
 
-static void test_write_1(void){
+static void test_SP_Pin_write__TRUE__DEBE_establecer_pin_en_ALTO(void){
     SP_Pin_setModo(SP_PB9,SP_PIN_SALIDA_OPEN_DRAIN);
     resetDeltaRegs();
     SP_Pin_write(SP_PB9,1);
@@ -150,7 +150,7 @@ static void test_write_1(void){
     TEST_ASSERT_BIT_HIGH(BIT_ODR,ODR);
 }
 
-static void test_write_0(void){
+static void test_SP_Pin_write__FALSE__DEBE_establecer_pin_en_BAJO(void){
     SP_Pin_setModo(SP_PB9,SP_PIN_SALIDA_OPEN_DRAIN);
     SP_Pin_write(SP_PB9,1);
     resetDeltaRegs();
@@ -163,7 +163,7 @@ static void test_write_0(void){
     TEST_ASSERT_BIT_LOW(BIT_ODR,ODR);
 }
 
-static void test_read_1(void){
+static void test_SP_Pin_read__DEBE_retornar_TRUE_si_la_entrada_es_ALTA(void){
     SP_Pin_setModo(SP_PB9,SP_PIN_SALIDA);
     SP_Pin_write(SP_PB9,1);
     SP_Pin_setModo(SP_PB9,SP_PIN_ENTRADA);
@@ -177,7 +177,7 @@ static void test_read_1(void){
     TEST_ASSERT_TRUE(valor_1);
 }
 
-static void test_read_0(void){
+static void test_SP_Pin_read__DEBE_retornar_FALSE_si_la_entrada_es_BAJA(void){
     SP_Pin_setModo(SP_PB9,SP_PIN_SALIDA);
     SP_Pin_write(SP_PB9,0);
     SP_Pin_setModo(SP_PB9,SP_PIN_ENTRADA);
@@ -191,7 +191,7 @@ static void test_read_0(void){
     TEST_ASSERT_FALSE(valor_0);
 }
 
-static void test_pinesJtag(void){
+static void test_los_pines_asociados_a_JTAG__DEBEN_ser_desasociados_al_configurar(void){
     static SP_HPin const pinesJtag[] = {SP_PA15,SP_PB3,SP_PB4};
     static size_t const NUM_PINES_JTAG = sizeof(pinesJtag)/sizeof(*pinesJtag);
     for(size_t i=0;i<NUM_PINES_JTAG;++i){
@@ -211,18 +211,18 @@ static void test_pinesJtag(void){
 
 int main(void){
     SP_init();
-    for(unsigned volatile i=0;i<(8000000/13)/2;++i);
+    SP_Tiempo_delay(500);
     UNITY_BEGIN();
     RUN_TEST(test_config_salida);
     RUN_TEST(test_config_salidaOpenDrain);
     RUN_TEST(test_config_entrada);
     RUN_TEST(test_config_entradaPullUp);
-    RUN_TEST(test_config_entradaPullDown);
-    RUN_TEST(test_write_0);
-    RUN_TEST(test_write_1);
-    RUN_TEST(test_read_1);
-    RUN_TEST(test_read_0);
-    RUN_TEST(test_pinesJtag);
+    RUN_TEST(test_SP_Pin_setModo__SP_PIN_ENTRADA_PULLDN__DEBE_configurar_pin_como_ENTRADA_con_PULL_DOWN_INTERNO);
+    RUN_TEST(test_SP_Pin_write__FALSE__DEBE_establecer_pin_en_BAJO);
+    RUN_TEST(test_SP_Pin_write__TRUE__DEBE_establecer_pin_en_ALTO);
+    RUN_TEST(test_SP_Pin_read__DEBE_retornar_TRUE_si_la_entrada_es_ALTA);
+    RUN_TEST(test_SP_Pin_read__DEBE_retornar_FALSE_si_la_entrada_es_BAJA);
+    RUN_TEST(test_los_pines_asociados_a_JTAG__DEBEN_ser_desasociados_al_configurar);
     UNITY_END();
     return 0;
 }

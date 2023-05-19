@@ -96,13 +96,14 @@ static void test_no_interfieren_interrupciones_pin_mismo_grupo(void){
 
     SP_Pin_write(PIN2,1);
     SP_Pin_write(PIN2,0);
-
+    TEST_ASSERT_TRUE(r1);
+    TEST_ASSERT_TRUE(r2);
     TEST_ASSERT_EQUAL_UINT32(3,contadores.c[0]);
     TEST_ASSERT_EQUAL_UINT32(2,contadores.c[1]);
 }
 int main(void){
     SP_init();
-    SP_Tiempo_delay(100);
+    SP_Tiempo_delay(500);
     UNITY_BEGIN();
     RUN_TEST(test_config_unica_por_interrupcion);
     RUN_TEST(test_interrupcion_flanco_ascendente);
