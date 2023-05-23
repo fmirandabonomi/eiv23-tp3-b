@@ -1,0 +1,26 @@
+#ifndef MAQUINA_ESTADO_IMPL_H
+#define MAQUINA_ESTADO_IMPL_H
+#include <maquina_estado.h>
+
+struct Maquina{
+    IReceptorEvento iReceptorEvento;
+    IColaEventos * colaEventos;
+    IDespachadorEvento *despachador;
+    IPilaEstados * pilaEstados;
+    Estado * inicial;
+    Estado * activo;
+};
+
+/**
+ * @brief Inicializa una máquina de estado.
+ * 
+ * @param colaEventos Cola de eventos a utilizar
+ * @param inicial Estado inicial (en el que inicia al recibir
+ * un evento con el mensaje  @ref MSJ_INICIALIZA )
+ * @return Maquina* Puntero a la nueva máquina a NULL si falló la
+ * creación
+ */
+void Maquina_init(Maquina *self, Estado *inicial, IColaEventos *colaEventos, IDespachadorEvento *despachador, IPilaEstados *pilaEstados);
+
+
+#endif

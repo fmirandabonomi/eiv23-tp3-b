@@ -2,6 +2,15 @@
     "files.associations": {
         "unity.h": "c",
         "unity_internals.h": "c",
-        "sp_pin.h": "c"
-    }
+        "sp_pin.h": "c",
+        "maquina_estado.h": "c",
+        "maquina_estado_impl.h": "c",
+        "i_cola_eventos.h": "c",
+        "me_estado.h": "c",
+        "me_evento.h": "c",
+        "stdint.h": "c",
+        "me_i_despachador_evento.h": "c",
+        "me_i_cola_eventos.h": "c"
+    },
+    "cmake.configureOnOpen": false
 }
