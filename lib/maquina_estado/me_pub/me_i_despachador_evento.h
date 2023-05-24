@@ -28,7 +28,7 @@ struct IDespachadorEvento{
      * @brief Puntero a tabla de funciones que implementan la interfaz abstracta
      * 
      */
-    IDespachadorEvento_VT *_vptr;
+    IDespachadorEvento_VT const *_vptr;
 };
 
 /**

@@ -19,7 +19,7 @@ Estado *Estado_getPadre(Estado *self){
     return self->padre;
 }
 
-ResultadoEvento Estado_procesaEvento(Estado *self, IReceptorEvento *ctx,Evento e){
+ResultadoEvento Estado_procesaEvento(Estado *self, ISoporteEstado *ctx,Evento e){
     ResultadoEvento r;
     r = self->procesaEvento(self,ctx,e);
     while(RES_EVENTO_IGNORADO == r.codigo && Estado_getNivel(self)){

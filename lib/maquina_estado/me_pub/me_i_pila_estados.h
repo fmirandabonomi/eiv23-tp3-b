@@ -35,7 +35,7 @@ struct IPilaEstados_VT{
 };
 
 struct IPilaEstados{
-    IPilaEstados_VT *_vptr;
+    IPilaEstados_VT const *_vptr;
 };
 
 /**

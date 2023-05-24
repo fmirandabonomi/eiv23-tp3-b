@@ -5,8 +5,6 @@
 #include <stm32f1xx.h>
 
 typedef struct SP_PinExti SP_PinExti;
-typedef enum SP_LineaExti SP_LineaExti;
-typedef enum SP_PuertoExti SP_PuertoExti;
 typedef struct SP_DescriptorExti SP_DescriptorExti;
 
 void EXTI0_IRQHandler(void);
@@ -24,7 +22,7 @@ struct SP_DescriptorExti{
 };
 
 
-enum SP_LineaExti{
+typedef enum SP_LineaExti{
     SP_EXTI_0,
     SP_EXTI_1,
     SP_EXTI_2,
@@ -42,9 +40,18 @@ enum SP_LineaExti{
     SP_EXTI_14,
     SP_EXTI_15,
     SP_NUM_EXTI_SOPORTADAS
-};
+}SP_LineaExti;
 
-enum SP_PuertoExti{SP_EXTI_A,SP_EXTI_B,SP_EXTI_C,SP_EXTI_D,SP_EXTI_E,SP_EXTI_F,SP_EXTI_G,SP_EXTI_H};
+typedef enum SP_PuertoExti{
+    SP_EXTI_A,
+    SP_EXTI_B,
+    SP_EXTI_C,
+    SP_EXTI_D,
+    SP_EXTI_E,
+    SP_EXTI_F,
+    SP_EXTI_G,
+    SP_EXTI_H
+}SP_PuertoExti;
 
 struct SP_PinExti{
     SP_LineaExti lineaExti;

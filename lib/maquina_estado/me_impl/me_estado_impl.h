@@ -2,7 +2,7 @@
 #define ME_ESTADO_IMPL_H
 #include <me_pub/me_estado.h>
 
-typedef ResultadoEvento (*Estado_FnProcesaEvento)(Estado *self,IDespachadorEvento *ctx, Evento e);
+typedef ResultadoEvento (*Estado_FnProcesaEvento)(Estado *self,ISoporteEstado *ctx, Evento e);
 
 struct Estado{
     Estado_FnProcesaEvento procesaEvento;

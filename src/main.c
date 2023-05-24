@@ -1,4 +1,5 @@
 #include <soporte_placa.h>
+#include <maquina_estado.h>
 
 #define LUZ_ON 0
 #define LUZ_OFF 1

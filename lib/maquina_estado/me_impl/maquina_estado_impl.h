@@ -4,9 +4,11 @@
 
 struct Maquina{
     IReceptorEvento iReceptorEvento;
+    ISoporteEstado iSoporteEstado;
     IColaEventos * colaEventos;
     IDespachadorEvento *despachador;
     IPilaEstados * pilaEstados;
+    ITimer * timer;
     Estado * inicial;
     Estado * activo;
 };
@@ -20,7 +22,13 @@ struct Maquina{
  * @return Maquina* Puntero a la nueva máquina a NULL si falló la
  * creación
  */
-void Maquina_init(Maquina *self, Estado *inicial, IColaEventos *colaEventos, IDespachadorEvento *despachador, IPilaEstados *pilaEstados);
+void Maquina_init(
+    Maquina *self, 
+    Estado *inicial, 
+    IColaEventos *colaEventos, 
+    IDespachadorEvento *despachador, 
+    IPilaEstados *pilaEstados, ITimer *timer
+);
 
 
 #endif

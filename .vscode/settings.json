@@ -10,7 +10,9 @@
         "me_evento.h": "c",
         "stdint.h": "c",
         "me_i_despachador_evento.h": "c",
-        "me_i_cola_eventos.h": "c"
+        "me_i_cola_eventos.h": "c",
+        "me_i_action.h": "c",
+        "me_i_timer.h": "c"
     },
     "cmake.configureOnOpen": false
 }

@@ -1,7 +1,7 @@
 #ifndef ME_ESTADO_H
 #define ME_ESTADO_H
 #include <me_pub/me_evento.h>
-#include <me_pub/me_i_despachador_evento.h>
+#include <me_pub/me_i_soporte_estado.h>
 
 /**
  * @brief Objeto que determina el comportamiento de una máquina
@@ -25,9 +25,7 @@ typedef struct ResultadoEvento ResultadoEvento;
  * @brief Indica el resultado del proceso de un evento.
  * 
  */
-typedef enum CodigoResultado CodigoResultado;
-
-enum CodigoResultado{
+typedef enum CodigoResultado{
     /**
      * @brief No había un evento pendiente. Este código solo puede
      * ser retornado por la máquina de estado.
@@ -61,7 +59,7 @@ enum CodigoResultado{
      */
     RES_TRANSICION_EXTERNA,
     NUM_CODIGOS_RES
-};
+}CodigoResultado;
 
 struct ResultadoEvento{
     /**
@@ -89,7 +87,7 @@ struct ResultadoEvento{
  * @return ResultadoEvento Resultado del proceso de evento, puede ser
  * RES_IGNORADO, RES_PROCESADO, RES_TRANSICION_INTERNA o RES_TRANSICION_EXTERNA
  */
-ResultadoEvento Estado_procesaEvento(Estado *self, IDespachadorEvento *ctx,Evento e);
+ResultadoEvento Estado_procesaEvento(Estado *self, ISoporteEstado *ctx,Evento e);
 /**
  * @brief Nivel de anidamiento del estado. Es el número de ancestros de este estado.
  * 
