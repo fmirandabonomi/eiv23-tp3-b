@@ -12,7 +12,9 @@
         "me_i_despachador_evento.h": "c",
         "me_i_cola_eventos.h": "c",
         "me_i_action.h": "c",
-        "me_i_timer.h": "c"
+        "me_i_timer.h": "c",
+        "malloc.h": "c",
+        "string.h": "c"
     },
     "cmake.configureOnOpen": false
 }

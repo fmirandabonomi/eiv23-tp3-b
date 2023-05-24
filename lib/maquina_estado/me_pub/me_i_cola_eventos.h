@@ -5,8 +5,7 @@
 #include <stdbool.h>
 
 /**
- * @brief Interfaz abstracta para una cola de eventos
- * FIFO. Esta cola permite almacenar eventos para su
+ * @brief Permite almacenar eventos para su
  * posterior procesamiento asíncrono por una máquina 
  * de estado.
  * 
