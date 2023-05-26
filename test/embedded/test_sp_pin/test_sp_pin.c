@@ -24,7 +24,7 @@ static void resetDeltaRegs(void){
     rstOdr = GPIOB->ODR;    
 }
 
-void setUp(){
+void setUp(void){
     __disable_irq();
     RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
     RCC->APB2RSTR = RCC_APB2RSTR_IOPBRST;
@@ -34,7 +34,7 @@ void setUp(){
     __enable_irq();
 }
 
-void tearDown(){
+void tearDown(void){
 }
 
 

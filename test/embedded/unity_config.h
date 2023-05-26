@@ -14,10 +14,28 @@
 extern "C"
 {
 #endif
-
+/**
+ * @brief Inicializa el puerto serie para transmitir los resultados
+ * de las pruebas.
+ * 
+ * @param baudrate Símbolos por segundo
+ */
 void unityOutputStart(unsigned long baudrate);
+/**
+ * @brief Transmite un caracter por el puerto serie
+ * 
+ * @param c Caracter a transmitir (recortado a 8 bits)
+ */
 void unityOutputChar(unsigned int c);
+/**
+ * @brief Espera que finalice la transmisión en curso
+ * 
+ */
 void unityOutputFlush(void);
+/**
+ * @brief Detiene y apaga el puerto serie
+ * 
+ */
 void unityOutputComplete(void);
 
 #define UNITY_OUTPUT_START()    unityOutputStart((unsigned long) 115200)

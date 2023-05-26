@@ -2,6 +2,7 @@
     "files.associations": {
         "unity.h": "c",
         "unity_internals.h": "c",
-        "sp_pin.h": "c"
+        "sp_pin.h": "c",
+        "stm32f1xx.h": "c"
     }
 }
