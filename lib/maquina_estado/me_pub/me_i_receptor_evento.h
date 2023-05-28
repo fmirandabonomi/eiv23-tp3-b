@@ -1,6 +1,8 @@
 #ifndef ME_I_RECEPTOR_EVENTO_H
 #define ME_I_RECEPTOR_EVENTO_H
 #include <me_pub/me_evento.h>
+#include <stdbool.h>
+
 /**
  * @brief Objeto capaz de recibir eventos en forma asincrónica
  * 

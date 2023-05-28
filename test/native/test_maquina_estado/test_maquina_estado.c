@@ -2,364 +2,218 @@
 #include <unity.h>
 #include <malloc.h>
 #include <string.h>
+#include "inc/cola_eventos.h"
+#include "inc/despachador.h"
+#include "inc/pila_estados.h"
+#include "inc/m_timer.h"
+#include "inc/mensajes.h"
+#include "inc/prueba1.h"
+#include "inc/test_array_evento_equal.h"
 
-typedef struct MTimer MTimer;
+static struct{
+    Evento T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15;
+} const evento={
+    .T1 = {.mensaje=MSG_T1,.param.uVal=0},
+    .T2 = {.mensaje=MSG_T2,.param.uVal=0},
+    .T3 = {.mensaje=MSG_T3,.param.uVal=0},
+    .T4 = {.mensaje=MSG_T4,.param.uVal=0},
+    .T5 = {.mensaje=MSG_T5,.param.uVal=0},
+    .T6 = {.mensaje=MSG_T6,.param.uVal=0},
+    .T7 = {.mensaje=MSG_T7,.param.uVal=0},
+    .T8 = {.mensaje=MSG_T8,.param.uVal=0},
+    .T9 = {.mensaje=MSG_T9,.param.uVal=0},
+    .T10 = {.mensaje=MSG_T10,.param.uVal=0},
+    .T11 = {.mensaje=MSG_T11,.param.uVal=0},
+    .T12 = {.mensaje=MSG_T12,.param.uVal=0},
+    .T13 = {.mensaje=MSG_T13,.param.uVal=0},
+    .T14 = {.mensaje=MSG_T14,.param.uVal=0},
+    .T15 = {.mensaje=MSG_T15,.param.uVal=0},
+};
 
-static bool MTimer_setTimeout(MTimer *self,IAction *action,Tiempo_ms tiempo,Tiempo_ms periodo);
-static bool MTimer_delTimeour(MTimer *self,IAction *action);
-static void MTimer_avanzaTiempo(MTimer *self, Tiempo_ms tiempo);
-static Tiempo_ms MTimer_avanzaAlSiguienteTimeout(MTimer *self);
+enum{
+    MAX_EVENTOS_COLA=8,
+    MAX_RECEPTORES=4,
+    NIVELES_PILA=4,
+    MAX_TIMEOUTS=4,
+    MAX_EVENTOS_RECEPTOR=16,
+    MAX_EVENTOS_BORRADOR = MAX_EVENTOS_COLA > MAX_EVENTOS_RECEPTOR ? MAX_EVENTOS_COLA : MAX_EVENTOS_RECEPTOR,
+    AUX_MAX_PASOS_DELETE=2
+};
+
+typedef void (*FnDelete)(void*);
+typedef struct PasoDelete{
+    FnDelete fnDelete;
+    void *pDelete;
+}PasoDelete;
+static struct Aux {
+    ColaEventos *cola;
+    Despachador *despachador;
+    PilaEstados *pila;
+    MTimer *timer;
+    ColaEventos *receptor;
+    struct BorradorEventos{
+        size_t numEventos;
+        Evento eventos[MAX_EVENTOS_BORRADOR];
+    }borradorEventos;
+    FnDelete fnDelete;
+    void *pDelete;
+}aux;
+
+static void Aux_copiaColaEventosEnBorrador(ColaEventos *cola){
+    aux.borradorEventos.numEventos = ColaEventos_getEventos(cola,MAX_EVENTOS_BORRADOR,aux.borradorEventos.eventos);
+}
 
 void setUp(void){
-
+    aux.cola = ColaEventos_new(MAX_EVENTOS_COLA);
+    aux.despachador = Despachador_new(MAX_RECEPTORES);
+    aux.pila = PilaEstados_new(NIVELES_PILA);
+    aux.timer = MTimer_new(MAX_TIMEOUTS);
+    aux.receptor = ColaEventos_new(MAX_EVENTOS_RECEPTOR);
+    memset(&aux.borradorEventos,0,sizeof(aux.borradorEventos));
+    aux.pDelete=NULL;
+    aux.fnDelete=(FnDelete)0;
 }
+
 void tearDown(void){
-
+    /* debe borrarse primero el objeto dependiente (con fnDelete) y luego los auxiliares */
+    if(aux.fnDelete && aux.pDelete)
+        aux.fnDelete(aux.pDelete);
+    
+    ColaEventos_delete(aux.cola);
+    Despachador_delete(aux.despachador);
+    PilaEstados_delete(aux.pila);
+    MTimer_delete(aux.timer);
+    ColaEventos_delete(aux.receptor);
 }
 
-static IColaEventos * Factory_createColaEventos(size_t maxEventos);
-static IDespachadorEvento * Factory_createDespachadorEvento(size_t maxReceptores);
-static IPilaEstados * Factory_createPilaEstados(size_t maxEstados);
-static MTimer * Factory_createMTimer(size_t maxTimeouts);
-static void Factory_free(void *objeto);
+static Maquina * Aux_conPrueba1(void){
+    TEST_ASSERT_NULL(aux.pDelete);
+    Prueba1 * obj = Prueba1_new(
+        ColaEventos_asIColaEventos(aux.cola),
+        Despachador_asIDespachadorEvento(aux.despachador),
+        PilaEstados_asIPilaEstados(aux.pila),
+        MTimer_asITimer(aux.timer));
+    TEST_ASSERT_NOT_NULL(obj);
+    aux.pDelete = obj;
+    aux.fnDelete = (FnDelete)Prueba1_delete;
+
+    Maquina * const result = Prueba1_asMaquina(obj);
+    TEST_ASSERT_NOT_NULL(result);
+
+    bool const receptorAgregado = Maquina_addReceptorEvento(result,ColaEventos_asIReceptorEvento(aux.receptor));
+    TEST_ASSERT_TRUE(receptorAgregado);
+    
+    return result;
+}
+
+static void Aux_finPrueba(void){
+    if(aux.fnDelete && aux.pDelete)
+        aux.fnDelete(aux.pDelete);
+    aux.fnDelete = (FnDelete)0;
+    aux.pDelete = NULL;
+}
+
+static void test_maquina_debe_admitir_al_menos_un_receptor(void){
+    Maquina *volatile maquina = Aux_conPrueba1();
+    (void)maquina;
+}
+static void test_evento_inicial_debe_estar_en_cola_de_maquina_nueva(void){
+    Maquina *volatile maquina = Aux_conPrueba1();
+    (void)maquina;
+    Aux_copiaColaEventosEnBorrador(aux.cola);
+    TEST_ASSERT_EQUAL_size_t(1,aux.borradorEventos.numEventos);
+    TEST_ASSERT_EQUAL(MSG_INICIALIZA,aux.borradorEventos.eventos[0].mensaje);
+    TEST_ASSERT_EQUAL(0,aux.borradorEventos.eventos[0].param.uVal);
+    Aux_copiaColaEventosEnBorrador(aux.receptor);
+    TEST_ASSERT_EQUAL_size_t(0,aux.borradorEventos.numEventos);
+}
 
 
-/* Pruebas */
+static void test_debe_ejecutar_inicializacion_de_maquina(void){
+    Maquina * maquina = Aux_conPrueba1();
+    ResultadoEvento r = Maquina_procesa(maquina);
+    TEST_ASSERT_EQUAL(r.codigo,RES_EVENTO_PROCESADO);
+    Aux_copiaColaEventosEnBorrador(aux.receptor);
+    static Evento const esperadoEventos[] = {
+        EVENTO_ACUSE('A',MSG_ENTRADA),
+        EVENTO_ACUSE('A',MSG_INICIALIZA)
+    };
+    static size_t const esperadoNumEventos = sizeof(esperadoEventos)/sizeof(*esperadoEventos);
+    TEST_ASSERT_EQUAL(esperadoNumEventos,aux.borradorEventos.numEventos);
+    /* En máquina de 64 bit falla porque al copiar una estructura no necesariamente se copian 
+     * los bytes de relleno (padding) para alineación y Evento tiene la estructura
+     * {unsigned mensaje:32;unsigned <padding>:32;unsigned param:64}
+     * porque en x86_64 los punteros son de 64 bit (con alineación de 64 bit) y param debe acomodar
+     * un puntero
+     *``` 
+     * TEST_ASSERT_EQUAL_MEMORY(esperadoEventos,aux.borradorEventos.eventos,sizeof(esperadoEventos));
+     * ```
+    */
+    TEST_ASSERT_EQUAL_EVENTO_ARRAY(esperadoEventos,aux.borradorEventos.eventos,esperadoNumEventos);
+}
+static void test_ejecuta_secuencia_de_eventos(void){
+    Maquina * maquina = Aux_conPrueba1();
+    ResultadoEvento rE;
+    bool rB;
+    
+    Maquina_procesa(maquina);
+    rE = Maquina_procesa(maquina); 
+    TEST_ASSERT_EQUAL(rE.codigo,RES_NULO);
+    rB = Maquina_dispatch(maquina,evento.T1);
+    TEST_ASSERT_TRUE(rB);
+    rB = Maquina_dispatch(maquina,evento.T5);
+    TEST_ASSERT_TRUE(rB);
+    rB = Maquina_dispatch(maquina,evento.T2);
+    TEST_ASSERT_TRUE(rB);
+    rB = Maquina_dispatch(maquina,evento.T3);
+    TEST_ASSERT_TRUE(rB);
+    rE = Maquina_procesa(maquina);
+    TEST_ASSERT_EQUAL(rE.codigo,RES_EVENTO_PROCESADO);
+    rE = Maquina_procesa(maquina);
+    TEST_ASSERT_EQUAL(rE.codigo,RES_EVENTO_IGNORADO);
+    rE = Maquina_procesa(maquina);
+    TEST_ASSERT_EQUAL(rE.codigo,RES_EVENTO_PROCESADO);
+    rE = Maquina_procesa(maquina);
+    TEST_ASSERT_EQUAL(rE.codigo,RES_EVENTO_PROCESADO);
+    
 
+    static Evento const esperadoEventos[] = {
+        EVENTO_ACUSE('A',MSG_ENTRADA),
+        EVENTO_ACUSE('A',MSG_INICIALIZA),
+        EVENTO_ACUSE('A',MSG_T1),
+        EVENTO_ACUSE('A',MSG_T2),
+        EVENTO_ACUSE('A',MSG_T3),
+        EVENTO_ACUSE('A',MSG_SALIDA),
+        EVENTO_ACUSE('A',MSG_ENTRADA),
+        EVENTO_ACUSE('A',MSG_INICIALIZA)
+    };
+    static size_t const esperadoNumEventos = sizeof(esperadoEventos)/sizeof(*esperadoEventos);
+
+    Aux_copiaColaEventosEnBorrador(aux.receptor);
+    TEST_ASSERT_EQUAL(esperadoNumEventos,aux.borradorEventos.numEventos);
+    TEST_ASSERT_EQUAL_EVENTO_ARRAY(esperadoEventos,aux.borradorEventos.eventos,esperadoNumEventos);
+}
+static void test_sale_de_estados_al_finalizar_maquina(void){
+    Maquina * maquina = Aux_conPrueba1();
+    Maquina_procesa(maquina);
+    ColaEventos_clear(aux.receptor);
+    Aux_finPrueba();
+    static Evento const esperadoEventos[]={EVENTO_ACUSE('A',MSG_SALIDA)};
+    static size_t const esperadoNumEventos = sizeof(esperadoEventos)/sizeof(esperadoEventos[0]);
+    Aux_copiaColaEventosEnBorrador(aux.receptor);
+    TEST_ASSERT_EQUAL(esperadoNumEventos,aux.borradorEventos.numEventos);
+    TEST_ASSERT_EQUAL_EVENTO_ARRAY(esperadoEventos,aux.borradorEventos.eventos,esperadoNumEventos);
+}
 
 /* Punto de entrada*/
 int main(void)
 {
     UNITY_BEGIN();
-
-    return UNITY_END();
-}
-
-
-/* Soporte: ColaEventos */
-typedef struct ColaEventos ColaEventos;
-
-static bool ColaEventos_dispatch(ColaEventos *self,Evento evento);
-static bool ColaEventos_queryDisponible(ColaEventos *self);
-static Evento ColaEventos_getSiguiente(ColaEventos *self);
-
-IColaEventos_VT const colaEventos_VT = {
-    .dispatch = (bool(*)(IColaEventos*,Evento)) ColaEventos_dispatch,
-    .queryDisponible = (bool(*)(IColaEventos*)) ColaEventos_queryDisponible,
-    .getSiguiente = (bool(*)(IColaEventos*)) ColaEventos_getSiguiente
-};
-
-struct ColaEventos{
-    IColaEventos iColaEventos;
-    size_t maxEventos;
-    size_t escrituras;
-    size_t lecturas;
-    Evento eventos[];
-};
-
-static IColaEventos *Factory_createColaEventos(size_t maxEventos){
-    TEST_ASSERT_GREATER_THAN_size_t(0,maxEventos);
-    ColaEventos *r;
-    size_t const sz = sizeof(*r) + maxEventos*sizeof(r->eventos[0]);
-    r = malloc(sz);
-    TEST_ASSERT_NOT_NULL(r);
-    r->iColaEventos._vptr=&colaEventos_VT;
-    r->maxEventos = maxEventos;
-    r->lecturas = 0;
-    r->escrituras = 0;
-    return r;
-}
-
-static bool ColaEventos__qCapacidadDisponible(ColaEventos *self){
-    return (self->escrituras - self->lecturas) < self->maxEventos;
-}
-static void ColaEventos__inserta(ColaEventos *self,Evento evento){
-    size_t const i = self->escrituras;
-    ++self->escrituras;
-    self->eventos[i%self->maxEventos]=evento;
-}
-static bool ColaEventos_dispatch(ColaEventos *self,Evento evento){
-    if (ColaEventos__qCapacidadDisponible(self)){
-        ColaEventos__inserta(self,evento);
-    }
-}
-static bool ColaEventos_queryDisponible(ColaEventos *self){
-    return self->escrituras - self->lecturas;
-}
-static Evento ColaEventos__getPrimerEvento(ColaEventos *self){
-    size_t const i = self->lecturas;
-    ++self->lecturas;
-    return self->eventos[i%self->lecturas];
-}
-static Evento ColaEventos_getSiguiente(ColaEventos *self){
-    bool const disponible = ColaEventos_queryDisponible(self);
-    TEST_ASSERT_TRUE(disponible);
-    return ColaEventos__getPrimerEvento(self);
-}
-
-/* Soporte: Despachador */
-
-typedef struct Despachador Despachador;
-
-static bool Despachador_addReceptor(Despachador * self,IReceptorEvento *rx);
-static bool Despachador_remReceptor(Despachador * self,IReceptorEvento *rx);
-static bool Despachador_dispatch(Despachador *self, Evento evento);
-
-static IDespachadorEvento_VT const despachadorEvento_VT = {
-    .addReceptor=(bool(*)(IDespachadorEvento *,IReceptorEvento*)) Despachador_addReceptor,
-    .remReceptor=(bool(*)(IDespachadorEvento *,IReceptorEvento*)) Despachador_remReceptor,
-    .dispatch=(bool(*)(IDespachadorEvento *,Evento)) Despachador_dispatch
-};
-
-struct Despachador{
-    IDespachadorEvento iDespachadorEvento;
-    size_t maxReceptores;
-    size_t numReceptores;
-    IReceptorEvento *receptores[];
-};
-
-static IDespachadorEvento * Factory_createDespachadorEvento(size_t maxReceptores){
-    TEST_ASSERT_GREATER_THAN_size_t(0,maxReceptores);
-    Despachador *r;
-    size_t sz = sizeof(*r) + maxReceptores * sizeof(r->receptores[0]);
-    r = malloc(sz);
-    TEST_ASSERT_NOT_NULL(r);
-    r->iDespachadorEvento._vptr = &despachadorEvento_VT;
-    r->maxReceptores = maxReceptores;
-    r->numReceptores = 0;
-    return r;
-}
-
-static size_t Despachador__indiceReceptor(Despachador *self,IReceptorEvento *rx){
-    size_t j;
-    for(j=0;j<self->numReceptores;++j){
-        IReceptorEvento *const rx_j = self->receptores[j];
-        if (rx_j == rx)
-            break;
-    }
-    return j;
-}
-
-static bool Despachador_addReceptor(Despachador * self,IReceptorEvento *rx){
-    bool r=false;
-    size_t i = Despachador__indiceReceptor(self,rx);
-    if (i < self->maxReceptores){
-        if(i >= self->numReceptores) 
-            ++self->numReceptores;
-        self->receptores[i]=rx;
-        r=true;
-    }
-    return r;
-}
-
-static bool Despachador_remReceptor(Despachador * self,IReceptorEvento *rx){
-    bool r=false;
-    size_t i = Despachador__indiceReceptor(self,rx);
-    size_t n = self->numReceptores;
-    if (i<n){
-        self->receptores[i] = self->receptores[n-1];
-        self->numReceptores = n-1;
-        r = true;
-    }
-    return r;
-}
-
-static bool Despachador_dispatch(Despachador *self, Evento evento){
-    bool r = false;
-    for(size_t i=0;i<self->numReceptores;++i){
-        IReceptorEvento *const rx = self->receptores[i];
-        bool const r_i = IReceptorEvento_dispatch(rx,evento);
-        r = r || r_i;
-    }
-    return r;
-}
-
-
-/* PilaEstados */
-
-typedef struct PilaEstados PilaEstados;
-
-static bool PilaEstados_push(PilaEstados *self,Estado *estado);
-static Estado* PilaEstados_pop(PilaEstados *self);
-static bool PilaEstados_qEmpty(PilaEstados *self);
-
-static IPilaEstados_VT const pilaEstados_VT = {
-    .push =(bool(*)(IPilaEstados*,Estado*)) PilaEstados_push,
-    .pop = (Estado*(*)(IPilaEstados*)) PilaEstados_pop,
-    .qEmpty = (bool(*)(IPilaEstados*)) PilaEstados_qEmpty
-};
-
-struct PilaEstados{
-    IPilaEstados iPilaEstados;
-    size_t maxEstados;
-    size_t primerLibre;
-    Estado *estados[];
-};
-
-static IPilaEstados * Factory_createPilaEstados(size_t maxEstados){
-    TEST_ASSERT_GREATER_THAN_size_t(0,maxEstados);
-    PilaEstados *r;
-    size_t sz = sizeof(*r) + maxEstados*sizeof(r->estados[0]);
-    r = malloc(sz);
-    TEST_ASSERT_NOT_NULL(r);
-    r->iPilaEstados._vptr = &pilaEstados_VT;
-    r->maxEstados = maxEstados;
-    r->primerLibre = 0;
-    return r;
-}
-
-
-static bool PilaEstados_push(PilaEstados *self,Estado *estado){
-    bool r=false;
-    size_t const n = self->primerLibre;
-    if(n<self->maxEstados){
-        self->estados[n]=estado;
-        self->primerLibre = n+1;
-        r = true;
-    }
-    return r;
-}
-static Estado* PilaEstados_pop(PilaEstados *self){
-    Estado *r = NULL;
-    size_t const n = self->primerLibre;
-    if (n){
-        r = self->estados[n-1];
-        self->primerLibre = n-1;
-    }
-    return r;
-}
-static bool PilaEstados_qEmpty(PilaEstados *self){
-    return !(self->primerLibre);
-}
-
-/* MTimer */
-
-
-static ITimer_VT const timer_VT = {
-    .setTimeout = (bool (*)(ITimer *,IAction *,Tiempo_ms,Tiempo_ms)) MTimer_setTimeout,
-    .delTimeout = (bool (*)(ITimer *,IAction *)) MTimer_delTimeour
-};
-
-typedef struct MTimer_Descritor{
-    IAction * accion;
-    Tiempo_ms restante;
-    Tiempo_ms periodo;
-}MTimer_Descritor;
-
-struct MTimer{
-    ITimer iTimer;
-    size_t maxTimeouts;
-    size_t numTimeouts;
-    MTimer_Descritor timeouts[];
-};
-
-static MTimer * Factory_createMTimer(size_t maxTimeouts){
-    TEST_ASSERT_GREATER_THAN_size_t(0,maxTimeouts);
-    MTimer *r;
-    size_t sz = sizeof(*r) + maxTimeouts * sizeof(r->timeouts[0]);
-    r = malloc(r);
-    TEST_ASSERT_NOT_NULL(r);
-    r->iTimer._vptr = &timer_VT;
-    r->maxTimeouts = maxTimeouts;
-    r->numTimeouts = 0;
-}
-
-static size_t MTimer__indiceTimeout(MTimer *self,IAction *action){
-    size_t i;
-    for(i=0;i<self->numTimeouts;++i){
-        IAction *const action_i = self->timeouts[i].accion;
-        if (action_i == action)
-            break;
-    }
-    return i;
-}
-static void MTimer__setDescriptor(MTimer *self,size_t pos,IAction *action,Tiempo_ms tiempo,Tiempo_ms periodo){
-    if (pos >= self->numTimeouts)
-        ++(self->numTimeouts);
-    MTimer_Descritor *const desc = self->timeouts + pos;
-    self->timeouts[pos] = (MTimer_Descritor){
-        .accion = action,
-        .restante = tiempo,
-        .periodo = periodo
-    };
-}
-static void MTimer__delDescriptor(MTimer *self,size_t pos){
-    size_t const n=self->numTimeouts;
-    if (pos < n){
-        self->timeouts[pos] = self->timeouts[n-1];
-        self->numTimeouts = n-1;
-    }
-}
-static bool MTimer_setTimeout(MTimer *self,IAction *action,Tiempo_ms tiempo,Tiempo_ms periodo){
-    bool r=false;
-    size_t i = MTimer__indiceTimeout(self,action);
-    if(i < self->maxTimeouts){
-        if (0 == tiempo)
-            tiempo = periodo;
-        if(tiempo)
-            MTimer__setDescriptor(self,i,action,tiempo,periodo);
-        else
-            MTimer__delDescriptor(self,i);
-        r=true;
-    }
-    return r;
-}
-static bool MTimer_delTimeour(MTimer *self,IAction *action){
-    bool r=false;
-    size_t i = MTimer__indiceTimeout(self,action);
-    if(i < self->numTimeouts){
-        MTimer__delDescriptor(self,i);
-        r = true;
-    }
-    return r;
-}
-
-static Tiempo_ms MTimer__getMinTiempo(MTimer *self){
-    Tiempo_ms minTiempo=0;
-    for(size_t i=0;i<self->numTimeouts;++i){
-        Tiempo_ms t_i = self->timeouts[i].restante;
-    }
-    return minTiempo;
-}
-static bool MTimer__actualizaTimeouts(MTimer *self, Tiempo_ms tiempo)
-{
-    bool ejecutado = false;
-    for(size_t i=0;i<self->numTimeouts;++i){
-        MTimer_Descritor *const d=self->timeouts + i;
-        if(d->restante > tiempo){
-            d->restante -= tiempo;
-        }else{
-            d->restante = d->periodo;
-            IAction_execute(d->accion);
-            ejecutado = true;
-        }
-    }
-    return ejecutado;
-}
-static void MTimer__podaTimeouts(MTimer *self){
-    size_t n = self->numTimeouts;
-    for(size_t i=0;i<n;++i){
-        while(!(self->timeouts[i].restante) && (i < (n-1)) ){
-            self->timeouts[i] = self->timeouts[n-1];
-            --n;
-        }
-    }
-    self->numTimeouts = n;
-}
-static void MTimer_avanzaTiempo(MTimer *self, Tiempo_ms tiempo){
-    bool const ejecutado = MTimer__actualizaTimeouts(self,tiempo);
-    if(ejecutado){
-        MTimer__podaTimeouts(self);
-    }
-}
-static Tiempo_ms MTimer_avanzaAlSiguienteTimeout(MTimer *self){
-    Tiempo_ms const r = MTimer__getMinTiempo(self);
-    MTimer_avanzaTiempo(self,r);
-    return r;
-}
-
-/* Free */
-
-static void Factory_free(void *objeto){
-    free(objeto);
+    RUN_TEST(test_maquina_debe_admitir_al_menos_un_receptor);
+    RUN_TEST(test_evento_inicial_debe_estar_en_cola_de_maquina_nueva);
+    RUN_TEST(test_debe_ejecutar_inicializacion_de_maquina);
+    RUN_TEST(test_ejecuta_secuencia_de_eventos);
+    RUN_TEST(test_sale_de_estados_al_finalizar_maquina);
+    UNITY_END();
+    return 0;
 }

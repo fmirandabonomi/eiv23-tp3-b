@@ -30,5 +30,13 @@ void Maquina_init(
     IPilaEstados *pilaEstados, ITimer *timer
 );
 
+/**
+ * @brief Finaiza la operación de la máquina de estado, llamar
+ * antes de liberar los recursos asociados
+ * 
+ * @param self Este objeto Maquina de estado
+ */
+void Maquina_finalize(Maquina *self);
+
 
 #endif

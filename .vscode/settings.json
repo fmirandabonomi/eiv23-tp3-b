@@ -14,7 +14,13 @@
         "me_i_action.h": "c",
         "me_i_timer.h": "c",
         "malloc.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "me_i_receptor_evento.h": "c",
+        "despachador.h": "c",
+        "cola_eventos.h": "c",
+        "me_i_pila_estados.h": "c",
+        "container_of.h": "c",
+        "stdio.h": "c"
     },
     "cmake.configureOnOpen": false
 }

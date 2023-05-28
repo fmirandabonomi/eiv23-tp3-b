@@ -14,28 +14,7 @@ static const ISoporteEstado_VT soporteEstado_VT = {
     .getTimer = SoporteEstado_getITimer
 };
 
-void Maquina_init(
-    Maquina *self,
-    Estado *inicial,
-    IColaEventos *colaEventos, 
-    IDespachadorEvento *despachador, 
-    IPilaEstados *pilaEstados, 
-    ITimer *timer
-){
-    self->iReceptorEvento.dispatch = ReceptorEvento_dispatch;
-    self->iSoporteEstado._vptr = &soporteEstado_VT;
-    self->activo      = NULL;
-    self->inicial     = inicial;
-    self->colaEventos = colaEventos;
-    self->despachador = despachador;
-    self->pilaEstados = pilaEstados;
-    self->timer       = timer;
-}
-
-bool Maquina_dispatch(Maquina *self,Evento e){
-    return IColaEventos_dispatch(self->colaEventos,e);
-}
-
+/* Funciones privadas */
 static Estado *abandonaEstado(Maquina *self,Estado *estado){
     if(estado){
         Estado_procesaEvento(estado,&self->iSoporteEstado,(Evento){.mensaje=MSG_SALIDA});
@@ -182,6 +161,32 @@ static ResultadoEvento Maquina__procesaSolicitudesDeTransicion_(Maquina *self,Re
 }
 
 
+/* interfaz pública*/
+
+void Maquina_init(
+    Maquina *self,
+    Estado *inicial,
+    IColaEventos *colaEventos, 
+    IDespachadorEvento *despachador, 
+    IPilaEstados *pilaEstados, 
+    ITimer *timer
+){
+    self->iReceptorEvento.dispatch = ReceptorEvento_dispatch;
+    self->iSoporteEstado._vptr = &soporteEstado_VT;
+    self->activo      = NULL;
+    self->inicial     = inicial;
+    self->colaEventos = colaEventos;
+    self->despachador = despachador;
+    self->pilaEstados = pilaEstados;
+    self->timer       = timer;
+    IColaEventos_dispatch(colaEventos,(Evento){.mensaje=MSG_INICIALIZA}); // Evento inicial
+}
+
+bool Maquina_dispatch(Maquina *self,Evento e){
+    return IColaEventos_dispatch(self->colaEventos,e);
+}
+
+
 ResultadoEvento Maquina_procesa(Maquina *self){
     ResultadoEvento r = {.codigo=RES_NULO};
     if(IColaEventos_queryDisponible(self->colaEventos)){
@@ -208,6 +213,12 @@ IReceptorEvento *Maquina_asIReceptorEvento(Maquina *self){
     return &self->iReceptorEvento;
 }
 
+void Maquina_finalize(Maquina *self){
+    if (self->activo){
+        Estado *x = abandonaHastaNivel(self,self->activo,0);
+        abandonaEstado(self,x);
+    }
+}
 
 /* Implementación de interfaces */
 

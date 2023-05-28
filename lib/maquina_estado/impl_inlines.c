@@ -2,6 +2,7 @@
 #include <me_pub/me_i_receptor_evento.h>
 #include <me_pub/me_i_despachador_evento.h>
 #include <me_pub/me_i_soporte_estado.h>
+#include <me_pub/me_i_pila_estados.h>
 /* Versión no inline de las funciones inline */
 
 extern inline bool IColaEventos_dispatch(IColaEventos *self, Evento e);
@@ -14,4 +15,6 @@ extern inline bool IDespachadorEvento_dispatch(IDespachadorEvento *self, Evento 
 extern inline bool ISoporteEstado_dispatchInterno(ISoporteEstado *self,Evento e);
 extern inline bool ISoporteEstado_dispatchExterno(ISoporteEstado *self,Evento e);
 extern inline ITimer * ISoporteEstado_getTimer(ISoporteEstado *self);
-
+extern inline bool IPilaEstados_push(IPilaEstados *self,Estado *estado);
+extern inline Estado * IPilaEstados_pop(IPilaEstados *self);
+extern inline bool IPilaEstados_qEmpty(IPilaEstados *self);
