@@ -20,7 +20,8 @@
         "cola_eventos.h": "c",
         "me_i_pila_estados.h": "c",
         "container_of.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "maquinas_de_prueba.h": "c"
     },
     "cmake.configureOnOpen": false
 }

@@ -1,13 +1,6 @@
-#include "inc/prueba1.h"
-#include "inc/mensajes.h"
+#include "maquinas_de_prueba_impl.h"
+
 /* Prueba1 */
-
-#include <me_impl/maquina_estado_impl.h>
-#include <me_impl/me_estado_impl.h>
-#include <unity.h>
-#include <stddef.h>
-#include <malloc.h>
-
 typedef struct Prueba1{
     Maquina maquina[1];
     struct{
@@ -19,7 +12,7 @@ static ResultadoEvento Prueba1_EstadoA_fEstado(Estado *self,ISoporteEstado *sopo
 
 static ResultadoEvento Prueba1_EstadoA_fEstado(Estado *self,ISoporteEstado *soporte,Evento e){
     ResultadoEvento r={0};
-    Evento acuse = {.mensaje=MSG_EVENTO_PROCESADO,.param.uVal = (unsigned)'A' << 8 | e.mensaje};
+    Evento const acuse = EVENTO_ACUSE('A',e.mensaje);
     switch(e.mensaje){
                  case MSG_ENTRADA:
     /*FALLTHRU*/ case MSG_INICIALIZA:
