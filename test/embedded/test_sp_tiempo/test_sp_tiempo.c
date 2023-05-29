@@ -1,6 +1,7 @@
 #include <soporte_placa.h>
 #include <unity.h>
 #include <stm32f1xx.h>
+#include <interfaces_impl/container_of.h>
 
 #define CICLOS_DIF 200UL
 
@@ -104,64 +105,109 @@ static void test_SP_Tiempo_getMilisegundos(void){
     TEST_ASSERT_GREATER_OR_EQUAL_UINT32(esperado-1,obtenido);
 }
 
-static struct Acumuladores {uint32_t a[4];} volatile acumuladores;
 
-static void Acumuladores_init(void){
+static void accionCuentaTiempo(IAccion *accion);
+
+typedef struct ContadorTiempo{
+    IAccion accion;
+    uint32_t volatile tiempo;
+    bool finalizado;
+}ContadorTiempo;
+
+static void ContadorTiempo_init(ContadorTiempo *self,uint32_t tiempoInicial){
+    static IAccion_VT const contadorTiempo_VT = {.ejecutar = accionCuentaTiempo};
+    self->accion._vptr = &contadorTiempo_VT;
+    self->tiempo = tiempoInicial;
+    self->finalizado = false;
+}
+
+static IAccion *ContadorTiempo_asIAccion(ContadorTiempo *self){
+    return &self->accion;
+}
+
+static bool ContadorTiempo_qCuentaFinalizada(ContadorTiempo *self){
+    return self->finalizado;
+}
+static uint32_t ContadorTiempo_getTiempo(ContadorTiempo *self){
+    return self->tiempo;
+}
+
+#define NUM_CONTADORES_TIEMPO 4
+
+static ContadorTiempo contadoresTiempo[NUM_CONTADORES_TIEMPO];
+
+
+static void ContadoresTiempo_init(void){
     uint32_t const t0 = SP_Tiempo_getMilisegundos();
-    size_t NUM_ACUMULADORES =sizeof(acumuladores.a)/sizeof(acumuladores.a[0]);
-    for(size_t i = 0;i<NUM_ACUMULADORES;++i)
-        acumuladores.a[i]=t0;
+    for(size_t i = 0;i<NUM_CONTADORES_TIEMPO;++i)
+        ContadorTiempo_init(contadoresTiempo + i, t0);
 }
-static void marca_tiempo(void volatile *int_acum){
-    uint32_t volatile *const a = int_acum;
-    *a = SP_Tiempo_getMilisegundos() - *a;
+
+
+static void accionCuentaTiempo(IAccion *accion){
+    ContadorTiempo *self = container_of(accion,ContadorTiempo,accion);
+    if (!self->finalizado){
+        self->tiempo = SP_Tiempo_getMilisegundos() - self->tiempo;
+        self->finalizado = true;
+    }
 }
+
 
 static void test_un_timeout(void){
-    Acumuladores_init();
-    bool const aceptado = SP_Tiempo_addTimeout(100,marca_tiempo,acumuladores.a);
+    ContadoresTiempo_init();
+    bool const aceptado = SP_Tiempo_addTimeout(100,ContadorTiempo_asIAccion(contadoresTiempo));
     TEST_ASSERT_TRUE(aceptado);
     SP_Tiempo_delay(100);
-    TEST_ASSERT_EQUAL_UINT32(100,acumuladores.a[0]);
+    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo));
+    TEST_ASSERT_EQUAL_UINT32(100,ContadorTiempo_getTiempo(contadoresTiempo));
 }
 
 static void test_varios_timeouts(void){
-    Acumuladores_init();
+    ContadoresTiempo_init();
     bool aceptado;
-    aceptado = SP_Tiempo_addTimeout(100,marca_tiempo,acumuladores.a+3);
+    aceptado = SP_Tiempo_addTimeout(100,ContadorTiempo_asIAccion(contadoresTiempo+3));
     TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(30,marca_tiempo,acumuladores.a+0);
+    aceptado = SP_Tiempo_addTimeout(30,ContadorTiempo_asIAccion(contadoresTiempo+0));
     TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(150,marca_tiempo,acumuladores.a+1);
+    aceptado = SP_Tiempo_addTimeout(150,ContadorTiempo_asIAccion(contadoresTiempo+1));
     TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(73,marca_tiempo,acumuladores.a+2);
+    aceptado = SP_Tiempo_addTimeout(73,ContadorTiempo_asIAccion(contadoresTiempo+2));
     TEST_ASSERT_TRUE(aceptado);
 
     SP_Tiempo_delay(150);
-    TEST_ASSERT_EQUAL_UINT32(30,acumuladores.a[0]);
-    TEST_ASSERT_EQUAL_UINT32(150,acumuladores.a[1]);
-    TEST_ASSERT_EQUAL_UINT32(73,acumuladores.a[2]);
-    TEST_ASSERT_EQUAL_UINT32(100,acumuladores.a[3]);
 
+    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 0));
+    TEST_ASSERT_EQUAL_UINT32(30,ContadorTiempo_getTiempo(contadoresTiempo + 0));
+    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 1));
+    TEST_ASSERT_EQUAL_UINT32(150,ContadorTiempo_getTiempo(contadoresTiempo + 1));
+    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 2));
+    TEST_ASSERT_EQUAL_UINT32(73,ContadorTiempo_getTiempo(contadoresTiempo + 2));
+    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 3));
+    TEST_ASSERT_EQUAL_UINT32(100,ContadorTiempo_getTiempo(contadoresTiempo + 3));
 }
 
 static void test_varios_timeouts_iguales(void){
-    Acumuladores_init();
+    ContadoresTiempo_init();
     bool aceptado;
-    aceptado = SP_Tiempo_addTimeout(30,marca_tiempo,acumuladores.a+3);
+    aceptado = SP_Tiempo_addTimeout(30,ContadorTiempo_asIAccion(contadoresTiempo+3));
     TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(30,marca_tiempo,acumuladores.a+0);
+    aceptado = SP_Tiempo_addTimeout(30,ContadorTiempo_asIAccion(contadoresTiempo+0));
     TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(30,marca_tiempo,acumuladores.a+1);
+    aceptado = SP_Tiempo_addTimeout(30,ContadorTiempo_asIAccion(contadoresTiempo+1));
     TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(30,marca_tiempo,acumuladores.a+2);
+    aceptado = SP_Tiempo_addTimeout(30,ContadorTiempo_asIAccion(contadoresTiempo+2));
     TEST_ASSERT_TRUE(aceptado);
 
     SP_Tiempo_delay(30);
-    TEST_ASSERT_EQUAL_UINT32(30,acumuladores.a[0]);
-    TEST_ASSERT_EQUAL_UINT32(30,acumuladores.a[1]);
-    TEST_ASSERT_EQUAL_UINT32(30,acumuladores.a[2]);
-    TEST_ASSERT_EQUAL_UINT32(30,acumuladores.a[3]);
+
+    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 0));
+    TEST_ASSERT_EQUAL_UINT32(30,ContadorTiempo_getTiempo(contadoresTiempo + 0));
+    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 1));
+    TEST_ASSERT_EQUAL_UINT32(30,ContadorTiempo_getTiempo(contadoresTiempo + 1));
+    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 2));
+    TEST_ASSERT_EQUAL_UINT32(30,ContadorTiempo_getTiempo(contadoresTiempo + 2));
+    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 3));
+    TEST_ASSERT_EQUAL_UINT32(30,ContadorTiempo_getTiempo(contadoresTiempo + 3));
 
 }
 

@@ -21,12 +21,13 @@ static uint32_t limiteRedondeo;
 
 typedef struct SP_TimeoutDescriptor{
     uint32_t volatile tiempo;
-    SP_TimeoutHandler volatile handler;
-    void volatile *volatile  param;
+    IAccion *volatile accion;
 } SP_TimeoutDescriptor;
 
-SP_TimeoutDescriptor timeoutDescriptors[SP_MAX_TIMEOUTS];
-
+static struct SP_Timeouts{
+    size_t numDescriptores;
+    SP_TimeoutDescriptor descriptores[SP_MAX_TIMEOUTS];
+}volatile timeouts;
 
 void SP_Tiempo_init(void){
     // Ver documentación CMSIS
@@ -57,33 +58,60 @@ void SP_Tiempo_delay(uint32_t tiempo){
 
 }
 
+static size_t buscaTimeout(IAccion *const accion){
+    size_t i;
+    for (i=0;i<timeouts.numDescriptores;++i){
+        SP_TimeoutDescriptor const * const d = timeouts.descriptores + i;
+        if (d->accion == accion) break;
+    }
+    return i;
+}
 
-bool SP_Tiempo_addTimeout(uint32_t const tiempo,SP_TimeoutHandler const handler,void volatile *const param){
+bool SP_Tiempo_addTimeout(uint32_t const tiempo,IAccion *const accion){
     bool hecho = false;
     __disable_irq();
-    for(size_t i=0;i<SP_MAX_TIMEOUTS;++i){
-        SP_TimeoutDescriptor * const td = timeoutDescriptors + i;
-        if (td->tiempo) continue;
+    size_t const i = buscaTimeout(accion);
+    if(i<SP_MAX_TIMEOUTS){
+        SP_TimeoutDescriptor * const td = timeouts.descriptores + i;
         td->tiempo = tiempo;
-        td->handler = handler;
-        td->param = param;
+        td->accion = accion;
+        if (i >= timeouts.numDescriptores)
+            ++timeouts.numDescriptores;
         hecho = true;
-        break;
     }
     __enable_irq();
     return hecho;
 }
 
-static void procesaTimeouts(void){
-    for (size_t i=0;i<SP_MAX_TIMEOUTS;++i){
-        SP_TimeoutDescriptor *const td = timeoutDescriptors + i;
-        if (td->tiempo){
-            const uint32_t tiempo_restante = --td->tiempo;
-            if(!tiempo_restante && td->handler){
-                td->handler(td->param);
-            }
-        } 
+static bool actualizaEjecutaTimeout(SP_TimeoutDescriptor volatile *td){
+    const uint32_t tiempo_restante = --td->tiempo;
+    bool ejecutado = false;
+    if(!tiempo_restante){
+        IAccion_ejecuta((IAccion*)td->accion);
+        ejecutado = true;
     }
+    return ejecutado;
+}
+static void procesaYEliminaTimeoutsEnPosicion(size_t const i){
+    SP_TimeoutDescriptor volatile *const td = timeouts.descriptores + i;
+    bool pasoAdicional = false;
+    size_t N = timeouts.numDescriptores;
+    do{
+        if (!td->tiempo){
+            *td = timeouts.descriptores[N-1];
+            --N;
+            pasoAdicional = true;
+        }else{
+            pasoAdicional = actualizaEjecutaTimeout(td);
+        }
+    }while(pasoAdicional && i<N);
+    timeouts.numDescriptores = N;
+}
+static void procesaTimeouts(void){
+    for (size_t i=0;i<timeouts.numDescriptores;++i){
+        procesaYEliminaTimeoutsEnPosicion(i);
+    }
+
 }
 
 void SysTick_Handler(void){
