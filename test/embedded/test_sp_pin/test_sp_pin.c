@@ -78,7 +78,7 @@
 #define BSRR_RESET_PIN_PRUEBA_Msk (1<<(PIN_PRUEBA+16))
 
 /* FUNCIONES DE UTILIDAD */
-static uint32_t GpioPrueba_reset(void){
+static void GpioPrueba_reset(void){
     RCC->APB2ENR |= RCC_APB2ENR_GPIO_PRUEBA_ENABLE;
     RCC->APB2RSTR = RCC_APB2RSTR_GPIO_PRUEBA_RESET;
     RCC->APB2RSTR = 0;

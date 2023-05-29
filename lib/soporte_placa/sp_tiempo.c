@@ -61,7 +61,7 @@ void SP_Tiempo_delay(uint32_t tiempo){
 static size_t buscaTimeout(IAccion *const accion){
     size_t i;
     for (i=0;i<timeouts.numDescriptores;++i){
-        SP_TimeoutDescriptor const * const d = timeouts.descriptores + i;
+        SP_TimeoutDescriptor volatile const * const d = timeouts.descriptores + i;
         if (d->accion == accion) break;
     }
     return i;
@@ -72,7 +72,7 @@ bool SP_Tiempo_addTimeout(uint32_t const tiempo,IAccion *const accion){
     __disable_irq();
     size_t const i = buscaTimeout(accion);
     if(i<SP_MAX_TIMEOUTS){
-        SP_TimeoutDescriptor * const td = timeouts.descriptores + i;
+        SP_TimeoutDescriptor volatile * const td = timeouts.descriptores + i;
         td->tiempo = tiempo;
         td->accion = accion;
         if (i >= timeouts.numDescriptores)
