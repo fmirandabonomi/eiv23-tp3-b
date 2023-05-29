@@ -60,13 +60,13 @@ static NivelEstado NivelEstado_min(NivelEstado a,NivelEstado b){
  * ejecutar salida y entrada del estado superior. Si es falso ejecuta salida y entrada
  * del estado superior.
  */
-static void Maquina__asciendeAlAncestroComun_(Maquina *self,Estado *destino, bool interna){
+static void Maquina__asciendeAlAncestroComun_(Maquina *self,Estado *destino, bool interna, NivelEstado nivelOrigen){
     Estado *pd=destino,*po=self->activo;
     if(!pd) return;
 
     if (po){
         /* Recorre hasta el ancestro común*/
-        NivelEstado n = NivelEstado_min(Estado_getNivel(po),Estado_getNivel(pd));
+        NivelEstado n = NivelEstado_min(nivelOrigen,Estado_getNivel(pd));
         po = abandonaHastaNivel(self,po,n);
         pd = pushEstadoHastaNivel(self,pd,n);
         if(Estado_getNivel(po) != Estado_getNivel(pd)){
@@ -136,8 +136,8 @@ static ResultadoEvento Maquina__procesaEvento_(Maquina *self,Evento e){
  * del estado superior.
  * @return ResultadoEvento Resultado del evento de inicialización en el estado destino
  */
-static ResultadoEvento Maquina__transicion_(Maquina *self,Estado *destino,bool interna){
-    Maquina__asciendeAlAncestroComun_(self,destino,interna);
+static ResultadoEvento Maquina__transicion_(Maquina *self,Estado *destino,bool interna,NivelEstado nivelOrigen){
+    Maquina__asciendeAlAncestroComun_(self,destino,interna,nivelOrigen);
     Maquina__desciendeAlObjetivo_(self);
     self->activo = destino;
     return Maquina__procesaEvento_(self,(Evento){.mensaje=MSG_INICIALIZA});
@@ -155,7 +155,7 @@ static ResultadoEvento Maquina__transicion_(Maquina *self,Estado *destino,bool i
  */
 static ResultadoEvento Maquina__procesaSolicitudesDeTransicion_(Maquina *self,ResultadoEvento r){
     while(RES_TRANSICION_EXTERNA == r.codigo || RES_TRANSICION_INTERNA == r.codigo){
-        r = Maquina__transicion_(self,r.param,RES_TRANSICION_INTERNA == r.codigo);
+        r = Maquina__transicion_(self,r.param,RES_TRANSICION_INTERNA == r.codigo,r.nivel);
     }
     return r;
 }
@@ -192,7 +192,7 @@ ResultadoEvento Maquina_procesa(Maquina *self){
     if(IColaEventos_queryDisponible(self->colaEventos)){
         Evento e = IColaEventos_getSiguiente(self->colaEventos);
         if(e.mensaje == MSG_INICIALIZA){
-            r = Maquina__transicion_(self,self->inicial,false);
+            r = Maquina__transicion_(self,self->inicial,false,0);
         }else{
             r = Maquina__procesaEvento_(self,e);
         }

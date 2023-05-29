@@ -59,11 +59,6 @@ enum{
     AUX_MAX_PASOS_DELETE=2
 };
 
-typedef void (*FnDelete)(void*);
-typedef struct PasoDelete{
-    FnDelete fnDelete;
-    void *pDelete;
-}PasoDelete;
 static struct Aux {
     ColaEventos *cola;
     Despachador *despachador;
@@ -74,8 +69,7 @@ static struct Aux {
         size_t numEventos;
         Evento eventos[MAX_EVENTOS_BORRADOR];
     }borradorEventos;
-    FnDelete fnDelete;
-    void *pDelete;
+    Maquina *maquina;
 }aux;
 
 #define MAQUINA_PROCESA_ESPERA_RESULTADO(maquina,resultado) do{\
@@ -91,17 +85,32 @@ static struct Aux {
 #define MAQUINA_DESPACHA_ESPERA_FALSE(maquina,evento) TEST_ASSERT_FALSE(Maquina_dispatch(maquina,evento))
 
 
-#define COMPRUEBA_SECUENCIA_EVENTOS(arrayEventosEsperados) do{\
-    Aux_copiaColaEventosEnBorrador(aux.receptor);\
-    static size_t const esperadoNumEventos = sizeof(arrayEventosEsperados)/sizeof(arrayEventosEsperados[0]);\
-    TEST_ASSERT_EQUAL_MESSAGE(esperadoNumEventos,aux.borradorEventos.numEventos," Numero de eventos ");\
-    TEST_ASSERT_EQUAL_EVENTO_ARRAY(esperadoEventos,aux.borradorEventos.eventos,esperadoNumEventos);\
-    ColaEventos_clear(aux.receptor);\
-}while(0)
+#define COMPRUEBA_SECUENCIA_EVENTOS(arrayEventosEsperados) Aux_compruebaSecuenciaEventos((arrayEventosEsperados),sizeof(arrayEventosEsperados)/sizeof((arrayEventosEsperados)[0]),__LINE__)
 
 
 static void Aux_copiaColaEventosEnBorrador(ColaEventos *cola){
     aux.borradorEventos.numEventos = ColaEventos_getEventos(cola,MAX_EVENTOS_BORRADOR,aux.borradorEventos.eventos);
+}
+
+static void Aux_compruebaSecuenciaEventos(Evento const *const eventos,size_t const numEventos, UNITY_LINE_TYPE const linea){
+    Aux_copiaColaEventosEnBorrador(aux.receptor);
+    size_t N = numEventos;
+    if (N>aux.borradorEventos.numEventos) 
+        N = aux.borradorEventos.numEventos;
+    CustomAssertEqualEventoArray(eventos,aux.borradorEventos.eventos,N,linea);
+    //TEST_ASSERT_EQUAL_MESSAGE(numEventos,aux.borradorEventos.numEventos," Numero de eventos "); con linea en lugar de __LINE__
+    UnityAssertEqualNumber((UNITY_INT)((numEventos)), (UNITY_INT)((aux.borradorEventos.numEventos)), ((" Numero de eventos ")), (UNITY_UINT)(linea), UNITY_DISPLAY_STYLE_INT);
+    
+    ColaEventos_clear(aux.receptor);\
+
+}
+
+static void Aux_finPrueba(void){
+    if(aux.maquina){
+        Maquina_finalize(aux.maquina);
+        free(aux.maquina);
+        aux.maquina = NULL;
+    }
 }
 
 void setUp(void){
@@ -111,15 +120,12 @@ void setUp(void){
     aux.timer = MTimer_new(MAX_TIMEOUTS);
     aux.receptor = ColaEventos_new(MAX_EVENTOS_RECEPTOR);
     memset(&aux.borradorEventos,0,sizeof(aux.borradorEventos));
-    aux.pDelete=NULL;
-    aux.fnDelete=(FnDelete)0;
+    aux.maquina = NULL;
 }
 
 void tearDown(void){
-    /* debe borrarse primero el objeto dependiente (con fnDelete) y luego los auxiliares */
-    if(aux.fnDelete && aux.pDelete)
-        aux.fnDelete(aux.pDelete);
-    
+    /* debe borrarse primero el objeto dependiente (con finPrueba) y luego los auxiliares */
+    Aux_finPrueba();
     ColaEventos_delete(aux.cola);
     Despachador_delete(aux.despachador);
     PilaEstados_delete(aux.pila);
@@ -127,58 +133,24 @@ void tearDown(void){
     ColaEventos_delete(aux.receptor);
 }
 
-static Maquina * Aux_conPrueba1(void){
-    TEST_ASSERT_NULL(aux.pDelete);
-    Prueba1 * obj = Prueba1_new(
+static Maquina * Aux_creaMaquina(MaquinaNew maquinaNew){
+    TEST_ASSERT_NULL(aux.maquina);
+    aux.maquina = maquinaNew(
         ColaEventos_asIColaEventos(aux.cola),
         Despachador_asIDespachadorEvento(aux.despachador),
         PilaEstados_asIPilaEstados(aux.pila),
         MTimer_asITimer(aux.timer));
-    TEST_ASSERT_NOT_NULL(obj);
-    aux.pDelete = obj;
-    aux.fnDelete = (FnDelete)Prueba1_delete;
-
-    Maquina * const result = Prueba1_asMaquina(obj);
-    TEST_ASSERT_NOT_NULL(result);
-
-    bool const receptorAgregado = Maquina_addReceptorEvento(result,ColaEventos_asIReceptorEvento(aux.receptor));
-    TEST_ASSERT_TRUE(receptorAgregado);
-    
-    return result;
-}
-
-static Maquina * Aux_conPrueba2(void){
-    TEST_ASSERT_NULL(aux.pDelete);
-    Prueba2 *obj = Prueba2_new(ColaEventos_asIColaEventos(aux.cola),
-                               Despachador_asIDespachadorEvento(aux.despachador),
-                               PilaEstados_asIPilaEstados(aux.pila),
-                               MTimer_asITimer(aux.timer));
-    TEST_ASSERT_NOT_NULL(obj);
-    aux.pDelete = obj;
-    aux.fnDelete = (FnDelete) Prueba2_delete;
-
-    Maquina * const result = Prueba2_asMaquina(obj);
-    TEST_ASSERT_NOT_NULL(result);
-
-    bool const receptorAgregado = Maquina_addReceptorEvento(result,ColaEventos_asIReceptorEvento(aux.receptor));
-    TEST_ASSERT_TRUE(receptorAgregado);
-
-    return result;
-}
-
-static void Aux_finPrueba(void){
-    if(aux.fnDelete && aux.pDelete)
-        aux.fnDelete(aux.pDelete);
-    aux.fnDelete = (FnDelete)0;
-    aux.pDelete = NULL;
+    TEST_ASSERT_NOT_NULL(aux.maquina);
+    TEST_ASSERT_TRUE(Maquina_addReceptorEvento(aux.maquina,ColaEventos_asIReceptorEvento(aux.receptor)));
+    return aux.maquina;
 }
 
 static void test_maquina_debe_admitir_al_menos_un_receptor(void){
-    Maquina *volatile maquina = Aux_conPrueba1();
+    Maquina *volatile maquina = Aux_creaMaquina(Prueba1_new);
     (void)maquina;
 }
 static void test_evento_inicial_debe_estar_en_cola_de_maquina_nueva(void){
-    Maquina *volatile maquina = Aux_conPrueba1();
+    Maquina *volatile maquina = Aux_creaMaquina(Prueba1_new);
     (void)maquina;
     Aux_copiaColaEventosEnBorrador(aux.cola);
     TEST_ASSERT_EQUAL_size_t(1,aux.borradorEventos.numEventos);
@@ -190,7 +162,7 @@ static void test_evento_inicial_debe_estar_en_cola_de_maquina_nueva(void){
 
 
 static void test_debe_ejecutar_inicializacion_de_maquina(void){
-    Maquina * maquina = Aux_conPrueba1();
+    Maquina * maquina = Aux_creaMaquina(Prueba1_new);
 
     MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
 
@@ -211,7 +183,7 @@ static void test_debe_ejecutar_inicializacion_de_maquina(void){
     */
 }
 static void test_ejecuta_secuencia_de_eventos(void){
-    Maquina * maquina = Aux_conPrueba1();
+    Maquina * maquina = Aux_creaMaquina(Prueba1_new);
 
     MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
     MAQUINA_PROCESA_ESPERA_NULO(maquina); 
@@ -240,7 +212,7 @@ static void test_ejecuta_secuencia_de_eventos(void){
     COMPRUEBA_SECUENCIA_EVENTOS(esperadoEventos);
 }
 static void test_sale_de_estados_al_finalizar_maquina(void){
-    Maquina * maquina = Aux_conPrueba1();
+    Maquina * maquina = Aux_creaMaquina(Prueba1_new);
     Maquina_procesa(maquina);
     ColaEventos_clear(aux.receptor);
     Aux_finPrueba();
@@ -249,8 +221,8 @@ static void test_sale_de_estados_al_finalizar_maquina(void){
 
 }
 
-static void test_transicion_entre_estados_debe_generar_salida_entrada_inicializacion(void){
-    Maquina *maquina = Aux_conPrueba2();
+static void test_debe_soportar_todas_las_transiciones_para_dos_estados_nivel_0(void){
+    Maquina *maquina = Aux_creaMaquina(Prueba2_new);
 
     MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T1);
     MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T2);
@@ -300,6 +272,193 @@ static void test_transicion_entre_estados_debe_generar_salida_entrada_inicializa
     COMPRUEBA_SECUENCIA_EVENTOS(esperadoEventos);
 }
 
+static void test_debe_soportar_todas_las_transiciones_en_una_maquina_de_un_estado_anidado_iniciando_en_estado_superior(void){
+    Maquina *maquina = Aux_creaMaquina(Prueba3_new_a);
+
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina); // INICIALIZA
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T1);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T2);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T3);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T4);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T5);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T6);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T7);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T8);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_PROCESA_ESPERA_NULO(maquina);
+    Aux_finPrueba();
+    maquina = NULL;
+    static Evento const esperadoEventos[]={
+        EVENTO_ACUSE_ENTRADA('A'),      // [*] --> A
+        EVENTO_ACUSE_INICIALIZA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T1('A'),           // A : T1
+        EVENTO_ACUSE_T2('B'),           // B : T2
+        EVENTO_ACUSE_T3('B'),           // A :: B --> B : T3
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T4('B'),           // A :: B --> A : T4
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_INICIALIZA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T5('A'),           // A :: A --> B : T5
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T6('B'),           // A.B --> A : T6
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_SALIDA('A'),
+        EVENTO_ACUSE_ENTRADA('A'),
+        EVENTO_ACUSE_INICIALIZA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T7('A'),           // A --> A : T7
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_SALIDA('A'),
+        EVENTO_ACUSE_ENTRADA('A'),
+        EVENTO_ACUSE_INICIALIZA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T8('A'),           // A --> A.B : T8
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_SALIDA('A'),
+        EVENTO_ACUSE_ENTRADA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_SALIDA('B'),       // finaliza
+        EVENTO_ACUSE_SALIDA('A')
+    };
+    COMPRUEBA_SECUENCIA_EVENTOS(esperadoEventos);
+}
+static void test_debe_soportar_todas_las_transiciones_en_una_maquina_de_un_estado_anidado_iniciando_en_estado_anidado(void){
+    Maquina *maquina = Aux_creaMaquina(Prueba3_new_b);
+
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina); // INICIALIZA
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T1);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T2);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T3);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T4);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T5);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T6);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T7);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T8);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_PROCESA_ESPERA_NULO(maquina);
+    Aux_finPrueba();
+    maquina = NULL;
+    static Evento const esperadoEventos[]={
+        EVENTO_ACUSE_ENTRADA('A'),      // [*]-->A.B
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T1('A'),           // A : T1
+        EVENTO_ACUSE_T2('B'),           // B : T2
+        EVENTO_ACUSE_T3('B'),           // A :: B --> B : T3
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'), 
+        EVENTO_ACUSE_T4('B'),           // A :: B --> A : T4
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_INICIALIZA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T5('A'),           // A :: A --> B : T5
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T6('B'),           // A.B --> A : T6
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_SALIDA('A'),
+        EVENTO_ACUSE_ENTRADA('A'),
+        EVENTO_ACUSE_INICIALIZA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T7('A'),           // A --> A : T7
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_SALIDA('A'),
+        EVENTO_ACUSE_ENTRADA('A'),
+        EVENTO_ACUSE_INICIALIZA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T8('A'),           // A --> A.B : T8
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_SALIDA('A'),
+        EVENTO_ACUSE_ENTRADA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_SALIDA('B'),       // finaliza
+        EVENTO_ACUSE_SALIDA('A')
+    };
+    COMPRUEBA_SECUENCIA_EVENTOS(esperadoEventos);
+}
+static void test_debe_soportar_transiciones_entre_estados_anidados_y_de_nivel_superior(void){
+    Maquina *maquina = Aux_creaMaquina(Prueba4_new);
+
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina); // INICIALIZA
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T1);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T2);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T3);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T5);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_DESPACHA_ESPERA_TRUE(maquina,evento.T6);
+    MAQUINA_PROCESA_ESPERA_PROCESADO(maquina);
+    MAQUINA_PROCESA_ESPERA_NULO(maquina);
+
+    static Evento const esperadoEventos[] = {
+        EVENTO_ACUSE_ENTRADA('A'),      // [*]-->A
+        EVENTO_ACUSE_INICIALIZA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T1('A'),           // A-->A.B : T1
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_SALIDA('A'),
+        EVENTO_ACUSE_ENTRADA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T2('B'),           // A.B-->C : T2
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_SALIDA('A'),
+        EVENTO_ACUSE_ENTRADA('C'),
+        EVENTO_ACUSE_INICIALIZA('C'),
+        EVENTO_ACUSE_T3('C'),           // C-->A : T3
+        EVENTO_ACUSE_SALIDA('C'),
+        EVENTO_ACUSE_ENTRADA('A'),
+        EVENTO_ACUSE_INICIALIZA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+        EVENTO_ACUSE_T5('A'),           // A-->C : T5
+        EVENTO_ACUSE_SALIDA('B'),
+        EVENTO_ACUSE_SALIDA('A'),
+        EVENTO_ACUSE_ENTRADA('C'),
+        EVENTO_ACUSE_INICIALIZA('C'),
+        EVENTO_ACUSE_T6('C'),           // C-->A.B : T6
+        EVENTO_ACUSE_SALIDA('C'),
+        EVENTO_ACUSE_ENTRADA('A'),
+        EVENTO_ACUSE_ENTRADA('B'),
+        EVENTO_ACUSE_INICIALIZA('B'),
+    };
+    COMPRUEBA_SECUENCIA_EVENTOS(esperadoEventos);
+}
+
 /* Punto de entrada*/
 int main(void)
 {
@@ -309,7 +468,10 @@ int main(void)
     RUN_TEST(test_debe_ejecutar_inicializacion_de_maquina);
     RUN_TEST(test_ejecuta_secuencia_de_eventos);
     RUN_TEST(test_sale_de_estados_al_finalizar_maquina);
-    RUN_TEST(test_transicion_entre_estados_debe_generar_salida_entrada_inicializacion);
+    RUN_TEST(test_debe_soportar_todas_las_transiciones_para_dos_estados_nivel_0);
+    RUN_TEST(test_debe_soportar_todas_las_transiciones_en_una_maquina_de_un_estado_anidado_iniciando_en_estado_superior);
+    RUN_TEST(test_debe_soportar_todas_las_transiciones_en_una_maquina_de_un_estado_anidado_iniciando_en_estado_anidado);
+    RUN_TEST(test_debe_soportar_transiciones_entre_estados_anidados_y_de_nivel_superior);
     UNITY_END();
     return 0;
 }

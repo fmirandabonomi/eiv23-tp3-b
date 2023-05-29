@@ -26,6 +26,7 @@ ResultadoEvento Estado_procesaEvento(Estado *self, ISoporteEstado *ctx,Evento e)
         self = Estado_getPadre(self);
         r = self->procesaEvento(self,ctx,e);
     }
+    r.nivel = Estado_getNivel(self);
     return r;
 }
 

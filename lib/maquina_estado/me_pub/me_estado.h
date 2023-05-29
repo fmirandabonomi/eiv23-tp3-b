@@ -74,6 +74,11 @@ struct ResultadoEvento{
      * 
      */
     Estado *param;
+    /**
+     * @brief Nivel de anidamiento en el cual tuvo lugar el procesamiento
+     * 
+     */
+    NivelEstado nivel;
 };
 
 /**

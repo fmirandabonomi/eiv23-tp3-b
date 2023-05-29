@@ -68,5 +68,13 @@ bool Maquina_remReceptorEvento(Maquina *self, IReceptorEvento *rx);
  */
 IReceptorEvento *Maquina_asIReceptorEvento(Maquina *self);
 
+/**
+ * @brief Finaiza la operación de la máquina de estado, llamar
+ * antes de liberar los recursos asociados
+ * 
+ * @param self Este objeto Maquina de estado
+ */
+void Maquina_finalize(Maquina *self);
+
 
 #endif
