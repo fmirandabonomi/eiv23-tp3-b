@@ -1,15 +1,17 @@
 #include <soporte_placa.h>
 #include <unity.h>
+#include "accion_contador.h"
 
 #define PIN1 SP_PB5
 #define PIN1b SP_PA5
 #define PIN2 SP_PB6
 
-static struct Contadores {uint32_t c[4];} volatile contadores;
-
+#define NUM_CONTADORES 4
+static Contador contadores[NUM_CONTADORES];
 
 static void resetContadores(void){
-    contadores = (struct Contadores){0};
+    for (size_t i=0;i<NUM_CONTADORES;++i)
+        Contador_init(contadores+i);
 }
 
 void setUp(void){
@@ -28,64 +30,74 @@ void tearDown(void)
     SP_Pin_resetInterrupcion(PIN2);
 }
 
-static void incrementaContador(uint32_t volatile *contador){
-    ++(*contador);
-}
-
 static void test_config_unica_por_interrupcion(void){   
-    bool const r1 = SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_ASCENDENTE, (SP_Pin_IntHandler) incrementaContador,contadores.c);
-    bool const r2 = SP_Pin_setInterrupcion(PIN1b,SP_PIN_INT_FLANCO_ASCENDENTE, (SP_Pin_IntHandler) incrementaContador,contadores.c+1);
-    TEST_ASSERT_TRUE(r1);
-    TEST_ASSERT_FALSE(r2);
+    TEST_ASSERT_TRUE(
+        SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_ASCENDENTE, Contador_getAccionIncrementaCuenta(contadores+0))
+    );
+    TEST_ASSERT_FALSE( // Recurso ocupado por el anterior setInterrupcion
+        SP_Pin_setInterrupcion(PIN1b,SP_PIN_INT_FLANCO_ASCENDENTE, Contador_getAccionIncrementaCuenta(contadores+1))
+    );
 }
 
 static void test_interrupcion_flanco_ascendente(void){
-    bool const r1 = SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_ASCENDENTE, (SP_Pin_IntHandler) incrementaContador,contadores.c);
-    TEST_ASSERT_TRUE(r1);
+    TEST_ASSERT_TRUE(
+        SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_ASCENDENTE, Contador_getAccionIncrementaCuenta(contadores+0))
+    );
     SP_Pin_write(PIN1,1);
     SP_Pin_write(PIN1,0);
     SP_Pin_write(PIN1,1);
-    TEST_ASSERT_EQUAL_UINT32(2,contadores.c[0]);
+    TEST_ASSERT_EQUAL_UINT32(2,Contador_getCuenta(contadores+0));
 }
 static void test_interrupcion_flanco_descendente(void){
-    bool const r1 = SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_DESCENDENTE, (SP_Pin_IntHandler) incrementaContador,contadores.c);
-    TEST_ASSERT_TRUE(r1);
+    TEST_ASSERT_TRUE(
+        SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_DESCENDENTE, Contador_getAccionIncrementaCuenta(contadores+0))
+    );
     SP_Pin_write(PIN1,1);
     SP_Pin_write(PIN1,0);
     SP_Pin_write(PIN1,1);
-    TEST_ASSERT_EQUAL_UINT32(1,contadores.c[0]);
+    TEST_ASSERT_EQUAL_UINT32(1,Contador_getCuenta(contadores+0));
 }
 static void test_interrupcion_ambos_flancos(void){
-    bool const r1 = SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_AMBOS_FLANCOS, (SP_Pin_IntHandler) incrementaContador,contadores.c);
-    TEST_ASSERT_TRUE(r1);
+    TEST_ASSERT_TRUE(
+        SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_AMBOS_FLANCOS, Contador_getAccionIncrementaCuenta(contadores+0))
+    );
     SP_Pin_write(PIN1,1);
     SP_Pin_write(PIN1,0);
     SP_Pin_write(PIN1,1);
-    TEST_ASSERT_EQUAL_UINT32(3,contadores.c[0]);
+    TEST_ASSERT_EQUAL_UINT32(3,Contador_getCuenta(contadores+0));
 }
 static void test_si_config_un_pin_no_libera_otro(void){   
-    bool const r1 = SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_ASCENDENTE, (SP_Pin_IntHandler) incrementaContador,contadores.c);
-    bool const r2 = SP_Pin_resetInterrupcion(PIN1b);
-    TEST_ASSERT_TRUE(r1);
-    TEST_ASSERT_FALSE(r2);
+    TEST_ASSERT_TRUE(
+        SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_ASCENDENTE, Contador_getAccionIncrementaCuenta(contadores+0))
+    );
+    TEST_ASSERT_FALSE(
+        SP_Pin_resetInterrupcion(PIN1b)
+    );
     SP_Pin_write(PIN1,1);
-    TEST_ASSERT_EQUAL_UINT32(1,contadores.c[0]);
+    TEST_ASSERT_EQUAL_UINT32(1,Contador_getCuenta(contadores+0));
 }
 static void test_no_interfiere_liberacion_pin_mismo_grupo(void){   
-    bool const r1 = SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_ASCENDENTE, (SP_Pin_IntHandler) incrementaContador,contadores.c);
-    bool const r2 = SP_Pin_setInterrupcion(PIN2,SP_PIN_INT_FLANCO_ASCENDENTE, (SP_Pin_IntHandler) incrementaContador,contadores.c+1);
-    bool const r3 = SP_Pin_resetInterrupcion(PIN1);
-    TEST_ASSERT_TRUE(r1);
-    TEST_ASSERT_TRUE(r2);
-    TEST_ASSERT_TRUE(r3);
+    TEST_ASSERT_TRUE(
+        SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_ASCENDENTE,Contador_getAccionIncrementaCuenta(contadores+0))
+    );
+    TEST_ASSERT_TRUE(
+        SP_Pin_setInterrupcion(PIN2,SP_PIN_INT_FLANCO_ASCENDENTE,Contador_getAccionIncrementaCuenta(contadores+1))
+    );
+    TEST_ASSERT_TRUE(
+        SP_Pin_resetInterrupcion(PIN1)
+    );
     SP_Pin_write(PIN1,1);
     SP_Pin_write(PIN2,1);
-    TEST_ASSERT_EQUAL_UINT32(0,contadores.c[0]);
-    TEST_ASSERT_EQUAL_UINT32(1,contadores.c[1]);
+    TEST_ASSERT_EQUAL_UINT32(0,Contador_getCuenta(contadores+0));
+    TEST_ASSERT_EQUAL_UINT32(1,Contador_getCuenta(contadores+1));
 }
 static void test_no_interfieren_interrupciones_pin_mismo_grupo(void){
-    bool const r1 = SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_DESCENDENTE, (SP_Pin_IntHandler) incrementaContador,contadores.c);
-    bool const r2 = SP_Pin_setInterrupcion(PIN2,SP_PIN_INT_AMBOS_FLANCOS, (SP_Pin_IntHandler) incrementaContador,contadores.c+1);
+    TEST_ASSERT_TRUE(
+        SP_Pin_setInterrupcion(PIN1,SP_PIN_INT_FLANCO_DESCENDENTE, Contador_getAccionIncrementaCuenta(contadores+0))
+    );
+    TEST_ASSERT_TRUE(
+        SP_Pin_setInterrupcion(PIN2,SP_PIN_INT_AMBOS_FLANCOS,      Contador_getAccionIncrementaCuenta(contadores+1))
+    );
 
     SP_Pin_write(PIN1,1);
     SP_Pin_write(PIN1,0);
@@ -96,11 +108,11 @@ static void test_no_interfieren_interrupciones_pin_mismo_grupo(void){
 
     SP_Pin_write(PIN2,1);
     SP_Pin_write(PIN2,0);
-    TEST_ASSERT_TRUE(r1);
-    TEST_ASSERT_TRUE(r2);
-    TEST_ASSERT_EQUAL_UINT32(3,contadores.c[0]);
-    TEST_ASSERT_EQUAL_UINT32(2,contadores.c[1]);
+    
+    TEST_ASSERT_EQUAL_UINT32(3,Contador_getCuenta(contadores+0));
+    TEST_ASSERT_EQUAL_UINT32(2,Contador_getCuenta(contadores+1));
 }
+
 int main(void){
     SP_init();
     SP_Tiempo_delay(500);

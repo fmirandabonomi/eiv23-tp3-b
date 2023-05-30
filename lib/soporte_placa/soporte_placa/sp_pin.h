@@ -1,6 +1,7 @@
 #ifndef SP_PIN_H
 #define SP_PIN_H
 #include <stdbool.h>
+#include <i_accion.h>
 
 /**
  * @brief Handles correspondientes a los pines de entrada/salida, para 
@@ -68,7 +69,6 @@ typedef enum SP_Pin_Modo{
     SP_PIN_SALIDA_OPEN_DRAIN // Salida con drenador abierto
 }SP_Pin_Modo;
 
-typedef void (* SP_Pin_IntHandler)(void volatile *param);
 
 typedef enum SP_Pin_IntFlanco{
     SP_PIN_INT_FLANCO_ASCENDENTE,
@@ -107,21 +107,20 @@ void SP_Pin_write(SP_HPin hPin, bool valor);
  * línea de interrupción, solo uno puede estar configurado por vez (por ejemplo,
  * no pueden configurarse interrupciones en PA0 y PB0 al mismo tiempo).
  * 
- * La bandera de interrupción es borrada antes de realizar el llamado al handler.
- * El handler es llamado desde una rutina de servicio de interrupción y por lo tanto
- * es ejecutado en modo HANDLER.
+ * La bandera de interrupción es borrada antes de ejecutar la acción. La ejecución
+ * es efectuada desde una rutina de servicio de interrupción y por lo tanto
+ * es ejecutada en modo HANDLER.
  * 
  * Es necesario eliminar la configuración original con resetInterrupción antes
- * de crear una nueva
+ * de crear una nueva para la misma línea EXTI
  * 
  * @param hPin Handle al objeto Pin
  * @param flanco Flanco al que la interrupción es sensible
- * @param handler Función handler
- * @param param Parámetro enviado a la función handler
+ * @param accion Accion a ejecutar
  * @return true Interrupción configurada
  * @return false Recurso ocupado
  */
-bool SP_Pin_setInterrupcion(SP_HPin hPin,SP_Pin_IntFlanco flanco,SP_Pin_IntHandler handler, void volatile *param);
+bool SP_Pin_setInterrupcion(SP_HPin hPin,SP_Pin_IntFlanco flanco,IAccion *accion);
 
 /**
  * @brief Elimina la configuración de interrupción de un pin y libera los recursos relacionados

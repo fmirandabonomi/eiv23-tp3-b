@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stm32f1xx.h>
+#include <i_accion.h>
 
 typedef struct SP_PinExti SP_PinExti;
 typedef enum SP_LineaExti SP_LineaExti;
@@ -18,8 +19,7 @@ void EXTI9_5_IRQHandler(void);
 void EXTI15_10_IRQHandler(void);
 
 struct SP_DescriptorExti{
-    SP_Pin_IntHandler handler;
-    void volatile *param;
+    IAccion *accion;
     SP_PinExti const *pin;
 };
 
@@ -146,28 +146,28 @@ static bool Opt_IRQn_Type_isFree(Opt_IRQn_Type oIrq){
     if (OPT_ISVALID(oIrq)){
         switch(OPT_GET_VALUE(oIrq)){
         case EXTI0_IRQn:
-            notFree = descriptores[SP_EXTI_0].handler;
+            notFree = descriptores[SP_EXTI_0].accion;
         break;case EXTI1_IRQn:
-            notFree = descriptores[SP_EXTI_1].handler;
+            notFree = descriptores[SP_EXTI_1].accion;
         break;case EXTI2_IRQn:
-            notFree = descriptores[SP_EXTI_2].handler;
+            notFree = descriptores[SP_EXTI_2].accion;
         break;case EXTI3_IRQn:
-            notFree = descriptores[SP_EXTI_3].handler;
+            notFree = descriptores[SP_EXTI_3].accion;
         break;case EXTI4_IRQn:
-            notFree = descriptores[SP_EXTI_4].handler;
+            notFree = descriptores[SP_EXTI_4].accion;
         break;case EXTI9_5_IRQn:
-            notFree =    descriptores[SP_EXTI_9].handler
-                     || descriptores[SP_EXTI_8].handler
-                     || descriptores[SP_EXTI_7].handler
-                     || descriptores[SP_EXTI_6].handler
-                     || descriptores[SP_EXTI_5].handler;
+            notFree =    descriptores[SP_EXTI_9].accion
+                     || descriptores[SP_EXTI_8].accion
+                     || descriptores[SP_EXTI_7].accion
+                     || descriptores[SP_EXTI_6].accion
+                     || descriptores[SP_EXTI_5].accion;
         break;case EXTI15_10_IRQn:
-            notFree =   descriptores[SP_EXTI_15].handler
-                     || descriptores[SP_EXTI_14].handler
-                     || descriptores[SP_EXTI_13].handler
-                     || descriptores[SP_EXTI_12].handler
-                     || descriptores[SP_EXTI_11].handler
-                     || descriptores[SP_EXTI_10].handler;
+            notFree =   descriptores[SP_EXTI_15].accion
+                     || descriptores[SP_EXTI_14].accion
+                     || descriptores[SP_EXTI_13].accion
+                     || descriptores[SP_EXTI_12].accion
+                     || descriptores[SP_EXTI_11].accion
+                     || descriptores[SP_EXTI_10].accion;
         break;default:
         break;
         }
@@ -184,16 +184,15 @@ static SP_DescriptorExti *SP_PinExti_getDescriptorExti(SP_PinExti const *self){
 }
 
 static bool SP_DescriptorExti_esLibre(SP_DescriptorExti *self){
-    return !self->handler;
+    return !self->accion;
 }
 
 static void SP_DescriptorExti_libera(SP_DescriptorExti *self){
     *self = (SP_DescriptorExti){0};
 }
 
-static void SP_DescriptorExti_init(SP_DescriptorExti *self,SP_PinExti const *pin, SP_Pin_IntHandler handler, void volatile *param){
-    self->handler = handler;
-    self->param = param;
+static void SP_DescriptorExti_init(SP_DescriptorExti *self,SP_PinExti const *pin, IAccion * accion){
+    self->accion = accion;
     self->pin = pin;
 }
 
@@ -265,7 +264,7 @@ static void SP_PinExti_libera_(SP_PinExti const *const self){
     SP_PinExti_liberaNvic_(self);
 }
 
-bool SP_Pin_setInterrupcion(SP_HPin hPin,SP_Pin_IntFlanco flanco,SP_Pin_IntHandler handler, void volatile *param){
+bool SP_Pin_setInterrupcion(SP_HPin hPin,SP_Pin_IntFlanco flanco,IAccion *accion){
     bool configurado = false;
     __disable_irq();
     if (hPin < SP_NUM_PINES){
@@ -273,7 +272,7 @@ bool SP_Pin_setInterrupcion(SP_HPin hPin,SP_Pin_IntFlanco flanco,SP_Pin_IntHandl
         SP_DescriptorExti *const desc = SP_PinExti_getDescriptorExti(pin);
         if(SP_DescriptorExti_esLibre(desc)){
             configurado = true;
-            SP_DescriptorExti_init(desc,pin,handler,param);
+            SP_DescriptorExti_init(desc,pin,accion);
             SP_PinExti_configura_(pin,flanco);
         }
     }
@@ -288,7 +287,7 @@ bool SP_Pin_resetInterrupcion(SP_HPin hPin){
     if (hPin < SP_NUM_PINES){
         SP_PinExti const *const pin = pinDeHandle(hPin);
         SP_DescriptorExti *const desc = SP_PinExti_getDescriptorExti(pin);
-        if (desc && desc->handler && pin == desc->pin){
+        if (desc && desc->accion && pin == desc->pin){
             liberado = true;
             SP_DescriptorExti_libera(desc);
             SP_PinExti_libera_(pin);
@@ -303,7 +302,7 @@ static void procesa_exti(SP_LineaExti const linea){
     if (EXTI->PR & mascara){
         SP_DescriptorExti const *const d = descriptores + linea;
         EXTI->PR = mascara; // Limpia bandera
-        if (d->handler) d->handler(d->param);
+        if (d->accion) IAccion_ejecuta(d->accion);
     }
 }
 
