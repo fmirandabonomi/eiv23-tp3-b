@@ -3,6 +3,7 @@
         "unity.h": "c",
         "unity_internals.h": "c",
         "sp_pin.h": "c",
-        "stm32f1xx.h": "c"
+        "stm32f1xx.h": "c",
+        "accion_captura_milisegundos.h": "c"
     }
 }

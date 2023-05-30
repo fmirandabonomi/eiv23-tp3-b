@@ -1,16 +1,25 @@
 #include <soporte_placa.h>
 #include <unity.h>
 #include <stm32f1xx.h>
-#include <interfaces_impl/container_of.h>
+#include "accion_captura_milisegundos.h"
 
 #define CICLOS_DIF 200UL
 
+
+#define NUM_CAPTURAS 4
+
+static CapturaMilisegundos capturas[NUM_CAPTURAS];
+
 void setUp(){
+    uint32_t t0 = SP_Tiempo_getMilisegundos();
+    for (size_t i = 0;i<NUM_CAPTURAS;++i)
+        CapturaMilisegundos_init(capturas+i,t0);
 
 }
 void tearDown(){
-
 }
+
+/* Funciones de utilidad: contador de ciclos de la unidad DWT */
 
 static void CycleCounter_resetValue(void){
     DWT->CYCCNT = 0;
@@ -40,7 +49,7 @@ static void CycleCounter_deinit(void){
     CycleCounter_resetValue();
 }
 
-
+/* Pruebas */
 static void test_SystemCoreClock_actualizado(void){
     uint32_t const SystemCoreClock_orig = SystemCoreClock;
     SystemCoreClockUpdate();
@@ -105,109 +114,52 @@ static void test_SP_Tiempo_getMilisegundos(void){
     TEST_ASSERT_GREATER_OR_EQUAL_UINT32(esperado-1,obtenido);
 }
 
-
-static void accionCuentaTiempo(IAccion *accion);
-
-typedef struct ContadorTiempo{
-    IAccion accion;
-    uint32_t volatile tiempo;
-    bool finalizado;
-}ContadorTiempo;
-
-static void ContadorTiempo_init(ContadorTiempo *self,uint32_t tiempoInicial){
-    static IAccion_VT const contadorTiempo_VT = {.ejecutar = accionCuentaTiempo};
-    self->accion._vptr = &contadorTiempo_VT;
-    self->tiempo = tiempoInicial;
-    self->finalizado = false;
-}
-
-static IAccion *ContadorTiempo_asIAccion(ContadorTiempo *self){
-    return &self->accion;
-}
-
-static bool ContadorTiempo_qCuentaFinalizada(ContadorTiempo *self){
-    return self->finalizado;
-}
-static uint32_t ContadorTiempo_getTiempo(ContadorTiempo *self){
-    return self->tiempo;
-}
-
-#define NUM_CONTADORES_TIEMPO 4
-
-static ContadorTiempo contadoresTiempo[NUM_CONTADORES_TIEMPO];
-
-
-static void ContadoresTiempo_init(void){
-    uint32_t const t0 = SP_Tiempo_getMilisegundos();
-    for(size_t i = 0;i<NUM_CONTADORES_TIEMPO;++i)
-        ContadorTiempo_init(contadoresTiempo + i, t0);
-}
-
-
-static void accionCuentaTiempo(IAccion *accion){
-    ContadorTiempo *self = container_of(accion,ContadorTiempo,accion);
-    if (!self->finalizado){
-        self->tiempo = SP_Tiempo_getMilisegundos() - self->tiempo;
-        self->finalizado = true;
-    }
-}
-
-
 static void test_un_timeout(void){
-    ContadoresTiempo_init();
-    bool const aceptado = SP_Tiempo_addTimeout(100,ContadorTiempo_asIAccion(contadoresTiempo));
-    TEST_ASSERT_TRUE(aceptado);
+    TEST_ASSERT_TRUE(SP_Tiempo_addTimeout(100,CapturaMilisegundos_getAccionCaptura(capturas+0)));
+
     SP_Tiempo_delay(100);
-    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo));
-    TEST_ASSERT_EQUAL_UINT32(100,ContadorTiempo_getTiempo(contadoresTiempo));
+
+    TEST_ASSERT_TRUE(CapturaMilisegundos_qCapturado(capturas+0));
+
+    TEST_ASSERT_EQUAL_UINT32(100,CapturaMilisegundos_getValor(capturas+0));
 }
 
 static void test_varios_timeouts(void){
-    ContadoresTiempo_init();
-    bool aceptado;
-    aceptado = SP_Tiempo_addTimeout(100,ContadorTiempo_asIAccion(contadoresTiempo+3));
-    TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(30,ContadorTiempo_asIAccion(contadoresTiempo+0));
-    TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(150,ContadorTiempo_asIAccion(contadoresTiempo+1));
-    TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(73,ContadorTiempo_asIAccion(contadoresTiempo+2));
-    TEST_ASSERT_TRUE(aceptado);
+    TEST_ASSERT_TRUE(SP_Tiempo_addTimeout(100,CapturaMilisegundos_getAccionCaptura(capturas+3)));
+    TEST_ASSERT_TRUE(SP_Tiempo_addTimeout(30, CapturaMilisegundos_getAccionCaptura(capturas+0)));
+    TEST_ASSERT_TRUE(SP_Tiempo_addTimeout(150,CapturaMilisegundos_getAccionCaptura(capturas+1)));
+    TEST_ASSERT_TRUE(SP_Tiempo_addTimeout(73, CapturaMilisegundos_getAccionCaptura(capturas+2)));
 
     SP_Tiempo_delay(150);
 
-    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 0));
-    TEST_ASSERT_EQUAL_UINT32(30,ContadorTiempo_getTiempo(contadoresTiempo + 0));
-    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 1));
-    TEST_ASSERT_EQUAL_UINT32(150,ContadorTiempo_getTiempo(contadoresTiempo + 1));
-    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 2));
-    TEST_ASSERT_EQUAL_UINT32(73,ContadorTiempo_getTiempo(contadoresTiempo + 2));
-    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 3));
-    TEST_ASSERT_EQUAL_UINT32(100,ContadorTiempo_getTiempo(contadoresTiempo + 3));
+    TEST_ASSERT_TRUE(CapturaMilisegundos_qCapturado(capturas + 0));
+    TEST_ASSERT_TRUE(CapturaMilisegundos_qCapturado(capturas + 1));
+    TEST_ASSERT_TRUE(CapturaMilisegundos_qCapturado(capturas + 2));
+    TEST_ASSERT_TRUE(CapturaMilisegundos_qCapturado(capturas + 3));
+
+    TEST_ASSERT_EQUAL_UINT32(30, CapturaMilisegundos_getValor(capturas + 0));
+    TEST_ASSERT_EQUAL_UINT32(150,CapturaMilisegundos_getValor(capturas + 1));
+    TEST_ASSERT_EQUAL_UINT32(73, CapturaMilisegundos_getValor(capturas + 2));
+    TEST_ASSERT_EQUAL_UINT32(100,CapturaMilisegundos_getValor(capturas + 3));
 }
 
 static void test_varios_timeouts_iguales(void){
-    ContadoresTiempo_init();
-    bool aceptado;
-    aceptado = SP_Tiempo_addTimeout(30,ContadorTiempo_asIAccion(contadoresTiempo+3));
-    TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(30,ContadorTiempo_asIAccion(contadoresTiempo+0));
-    TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(30,ContadorTiempo_asIAccion(contadoresTiempo+1));
-    TEST_ASSERT_TRUE(aceptado);
-    aceptado = SP_Tiempo_addTimeout(30,ContadorTiempo_asIAccion(contadoresTiempo+2));
-    TEST_ASSERT_TRUE(aceptado);
+    TEST_ASSERT_TRUE(SP_Tiempo_addTimeout(30,CapturaMilisegundos_getAccionCaptura(capturas+3)));
+    TEST_ASSERT_TRUE(SP_Tiempo_addTimeout(30,CapturaMilisegundos_getAccionCaptura(capturas+0)));
+    TEST_ASSERT_TRUE(SP_Tiempo_addTimeout(30,CapturaMilisegundos_getAccionCaptura(capturas+1)));
+    TEST_ASSERT_TRUE(SP_Tiempo_addTimeout(30,CapturaMilisegundos_getAccionCaptura(capturas+2)));
 
     SP_Tiempo_delay(30);
 
-    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 0));
-    TEST_ASSERT_EQUAL_UINT32(30,ContadorTiempo_getTiempo(contadoresTiempo + 0));
-    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 1));
-    TEST_ASSERT_EQUAL_UINT32(30,ContadorTiempo_getTiempo(contadoresTiempo + 1));
-    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 2));
-    TEST_ASSERT_EQUAL_UINT32(30,ContadorTiempo_getTiempo(contadoresTiempo + 2));
-    TEST_ASSERT_TRUE(ContadorTiempo_qCuentaFinalizada(contadoresTiempo + 3));
-    TEST_ASSERT_EQUAL_UINT32(30,ContadorTiempo_getTiempo(contadoresTiempo + 3));
+    TEST_ASSERT_TRUE(CapturaMilisegundos_qCapturado(capturas + 0));
+    TEST_ASSERT_TRUE(CapturaMilisegundos_qCapturado(capturas + 1));
+    TEST_ASSERT_TRUE(CapturaMilisegundos_qCapturado(capturas + 2));
+    TEST_ASSERT_TRUE(CapturaMilisegundos_qCapturado(capturas + 3));
+
+    TEST_ASSERT_EQUAL_UINT32(30,CapturaMilisegundos_getValor(capturas + 0));
+    TEST_ASSERT_EQUAL_UINT32(30,CapturaMilisegundos_getValor(capturas + 1));
+    TEST_ASSERT_EQUAL_UINT32(30,CapturaMilisegundos_getValor(capturas + 2));
+    TEST_ASSERT_EQUAL_UINT32(30,CapturaMilisegundos_getValor(capturas + 3));
 
 }
 
