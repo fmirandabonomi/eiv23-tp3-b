@@ -5,12 +5,11 @@
 static Resultado estadoApagado(Maquina *ctx,Evento evento);
 static Resultado estadoEncendido(Maquina *ctx,Evento evento);
 
-void ControladorLuz_init(ControladorLuz *self, uint32_t tiempoOn, SoporteControlador *soporte){
+void ControladorLuz_init(ControladorLuz *self, uint32_t tiempoOn, ControladorLuz_Acciones const *acciones){
 
     Maquina_init(&self->maquina,estadoApagado);
     self->tiempoOn = tiempoOn;
-    self->soporte = soporte;
-    SoporteControlador_asociaControlador(soporte,&self->maquina);
+    self->acciones = acciones;
 }
 
 Maquina * ControladorLuz_asMaquina(ControladorLuz *self){
@@ -22,16 +21,13 @@ static Resultado estadoApagado(Maquina *ctx,Evento evento){
     Resultado r = {0};
     switch (evento){
     case EV_RESET:
-        SoporteControlador_luzOff(self->soporte);
+        self->acciones->apagaLuz();
         r.codigo = RES_PROCESADO;
     break; case EV_BOTON_PULSADO:
-        if(SoporteControlador_setTimeout(self->soporte,self->tiempoOn,EV_TIMEOUT)){
-            SoporteControlador_luzOn(self->soporte);
-            r.codigo = RES_TRANSICION;
-            r.nuevoEstado = estadoEncendido;
-        }else{
-            r.codigo = RES_IGNORADO;
-        }
+        self->acciones->enciendeLuz();
+        self->acciones->despachaLuegoDeTiempo(ctx,EV_TIMEOUT,self->tiempoOn);
+        r.codigo = RES_TRANSICION;
+        r.nuevoEstado = estadoEncendido;
     break;default:
         r.codigo = RES_IGNORADO;
     break;
@@ -43,7 +39,7 @@ static Resultado estadoEncendido(Maquina *ctx,Evento evento){
     Resultado r = {0};
     switch (evento){
     break; case EV_TIMEOUT:
-        SoporteControlador_luzOff(self->soporte);
+        self->acciones->apagaLuz();
         r.codigo = RES_TRANSICION;
         r.nuevoEstado = estadoApagado;
     break;default:
