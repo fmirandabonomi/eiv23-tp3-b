@@ -1,28 +1,27 @@
-#include "accion_despacha_evento.h"
+#include <accion_despacha_evento.h>
 #include <interfaces_impl/container_of.h>
-#include <stm32f1xx.h>
 
-static void DespachaEvento_ejecutar(IAccion *iAccion);
+static void AccionDespachaEvento_ejecutar(IAccion *iAccion);
 
 static IAccion_VT const despachaEvento_VT= {
-    .ejecutar = DespachaEvento_ejecutar
+    .ejecutar = AccionDespachaEvento_ejecutar
 };
 
 
 
-void DespachaEvento_init(DespachaEvento *self,Evento evento, Maquina *destino){
+void AccionDespachaEvento_init(AccionDespachaEvento *self,Evento evento, Maquina *destino){
     self->accion._vptr=&despachaEvento_VT;
     self->destino = destino;
     self->evento = evento;
     self->estadoDespacho = ED_NO_DESPACHADO;
 }
 
-IAccion * DespachaEvento_asIAccion(DespachaEvento *self){
+IAccion * AccionDespachaEvento_asIAccion(AccionDespachaEvento *self){
     return &self->accion;
 }
 
-static void DespachaEvento_ejecutar(IAccion *iAccion){
-    DespachaEvento *self = container_of(iAccion,DespachaEvento,accion);
+static void AccionDespachaEvento_ejecutar(IAccion *iAccion){
+    AccionDespachaEvento *self = container_of(iAccion,AccionDespachaEvento,accion);
     if (self->estadoDespacho != ED_NO_INICIALIZADO){
         bool despachado = Maquina_despacha(self->destino,self->evento);
         if(despachado){
@@ -33,17 +32,17 @@ static void DespachaEvento_ejecutar(IAccion *iAccion){
     }
 }
 
-EstadoDespacho DespachaEvento_getEstadoDespacho(DespachaEvento *self){
+EstadoDespacho AccionDespachaEvento_getEstadoDespacho(AccionDespachaEvento *self){
     return self->estadoDespacho;
 }
 
-Evento DespachaEvento_getEvento(DespachaEvento *self){
+Evento AccionDespachaEvento_getEvento(AccionDespachaEvento *self){
     Evento r=EV_NULO;
     if (self->estadoDespacho != ED_NO_INICIALIZADO){
         r = self->evento;
     }
     return r;
 }
-void DespachaEvento_deInit(DespachaEvento *self){
+void AccionDespachaEvento_deInit(AccionDespachaEvento *self){
     self->estadoDespacho=ED_NO_INICIALIZADO;
 }

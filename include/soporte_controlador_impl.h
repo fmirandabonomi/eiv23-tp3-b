@@ -9,7 +9,7 @@
 #endif
 
 struct SoporteControlador{
-    DespachaEvento despachadoresTimeout[2];
+    AccionDespachaEvento despachadoresTimeout[2];
     SP_HPin pinLuz;
     bool nivelOn;
     Maquina *maquina;

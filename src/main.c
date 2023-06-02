@@ -22,7 +22,7 @@ static Pulsador *pulsador;
 static void setup(void){
     static ControladorLuz implControlador;
     static SoporteControlador soporteControlador;
-    static DespachaEvento evBotonPulsado;
+    static AccionDespachaEvento evBotonPulsado;
     static Pulsador implPulsador;
     SP_init();
 
@@ -30,12 +30,12 @@ static void setup(void){
     ControladorLuz_init(&implControlador,TIEMPO_ON,&soporteControlador);
     controlador = ControladorLuz_asMaquina(&implControlador);
 
-    DespachaEvento_init(&evBotonPulsado,EV_BOTON_PULSADO,controlador);
+    AccionDespachaEvento_init(&evBotonPulsado,EV_BOTON_PULSADO,controlador);
     Pulsador_init(&implPulsador,
                      PIN_PULSADOR,
                      PULSADOR_ACTIVO,
                      HISTERESIS_ANTIRREBOTE,
-                     DespachaEvento_asIAccion(&evBotonPulsado));
+                     AccionDespachaEvento_asIAccion(&evBotonPulsado));
     pulsador = &implPulsador;
 
     Maquina_procesa(controlador); // Estado inicial luz

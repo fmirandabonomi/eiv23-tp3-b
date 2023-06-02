@@ -10,7 +10,7 @@ void SoporteControlador_init(SoporteControlador *self, SP_HPin pinLuz, bool nive
     SP_Pin_write(pinLuz,!nivelOn);
     SP_Pin_setModo(pinLuz,SP_PIN_SALIDA);
     for (size_t i=0;i<SC_MAX_TIMEOUTS;++i){
-        DespachaEvento_deInit(self->despachadoresTimeout+i);
+        AccionDespachaEvento_deInit(self->despachadoresTimeout+i);
     }
 }
 
@@ -30,10 +30,10 @@ static size_t SoporteControlador_indiceDespachador(SoporteControlador *self,Even
     size_t primerLibre;
     bool libreHallado=false;
     for(r=0;r<SC_MAX_TIMEOUTS;++r){
-        DespachaEvento *const d = self->despachadoresTimeout+r;
-        if (DespachaEvento_getEstadoDespacho(d) == ED_NO_DESPACHADO)
+        AccionDespachaEvento *const d = self->despachadoresTimeout+r;
+        if (AccionDespachaEvento_getEstadoDespacho(d) == ED_NO_DESPACHADO)
         {
-            if ((DespachaEvento_getEvento(d) == evento)) break;
+            if ((AccionDespachaEvento_getEvento(d) == evento)) break;
         }else if(!libreHallado){
             primerLibre = r;
             libreHallado =true;
@@ -50,9 +50,9 @@ bool SoporteControlador_setTimeout(SoporteControlador *self, uint32_t tiempo, Ev
     if (self->maquina){
         size_t i = SoporteControlador_indiceDespachador(self,evento);
         if (i < SC_MAX_TIMEOUTS){
-            DespachaEvento *const d = self->despachadoresTimeout + i; 
-            DespachaEvento_init(d,evento,self->maquina);
-            hecho = SP_Tiempo_addTimeout(tiempo,DespachaEvento_asIAccion(d));
+            AccionDespachaEvento *const d = self->despachadoresTimeout + i; 
+            AccionDespachaEvento_init(d,evento,self->maquina);
+            hecho = SP_Tiempo_addTimeout(tiempo,AccionDespachaEvento_asIAccion(d));
         }
     }
     return hecho;

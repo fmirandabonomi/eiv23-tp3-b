@@ -10,12 +10,12 @@ typedef enum EstadoDespacho{
     ED_FALLA
 }EstadoDespacho;
 
-typedef struct DespachaEvento{
+typedef struct AccionDespachaEvento{
     IAccion accion;
     Evento evento;
     Maquina *destino;
     EstadoDespacho estadoDespacho; 
-}DespachaEvento;
+}AccionDespachaEvento;
 
 /**
  * @brief Inicializa el objeto para su uso
@@ -24,7 +24,7 @@ typedef struct DespachaEvento{
  * @param evento Evento a despachar al ejecutar
  * @param destino Máquina de estado de destino
  */
-void DespachaEvento_init(DespachaEvento *self,Evento evento, Maquina *destino);
+void AccionDespachaEvento_init(AccionDespachaEvento *self,Evento evento, Maquina *destino);
 
 /**
  * @brief Acción que despacha un evento al ser ejecutada. Puede
@@ -35,7 +35,7 @@ void DespachaEvento_init(DespachaEvento *self,Evento evento, Maquina *destino);
  * @param self Este objeto
  * @return IAccion* Acción
  */
-IAccion * DespachaEvento_asIAccion(DespachaEvento *self);
+IAccion * AccionDespachaEvento_asIAccion(AccionDespachaEvento *self);
 
 /**
  * @brief Consulta el estado actual del proceso de despacho
@@ -47,7 +47,7 @@ IAccion * DespachaEvento_asIAccion(DespachaEvento *self);
  * @return ED_DESPACHADO El objeto ha despachado un evento
  * @return ED_FALLA El último intento de despacho de evento ha fallado
  */
-EstadoDespacho DespachaEvento_getEstadoDespacho(DespachaEvento *self);
+EstadoDespacho AccionDespachaEvento_getEstadoDespacho(AccionDespachaEvento *self);
 
 /**
  * @brief Evento que será despachado
@@ -56,13 +56,13 @@ EstadoDespacho DespachaEvento_getEstadoDespacho(DespachaEvento *self);
  * @return EV_NULO No inicializado
  * @return Evento Evento a despachar
  */
-Evento DespachaEvento_getEvento(DespachaEvento *self);
+Evento AccionDespachaEvento_getEvento(AccionDespachaEvento *self);
 /**
  * @brief Establece el estado del objeto en no inicializado,
  * removiendo la configuración realizada al inicializar.
  * 
  * @param self 
  */
-void DespachaEvento_deInit(DespachaEvento *self);
+void AccionDespachaEvento_deInit(AccionDespachaEvento *self);
 
 #endif
