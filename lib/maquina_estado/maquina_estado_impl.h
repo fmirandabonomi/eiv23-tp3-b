@@ -11,13 +11,13 @@ typedef enum CodResultado{
 
 struct Resultado{
     CodResultado codigo;
-    Estado param; // Valido cuando resultado = RES_TRANSICION
+    Estado nuevoEstado; // Valido cuando resultado = RES_TRANSICION
 };
 
 /**
  * @brief Inicializa la máquina de estado
  * 
- * @param self Este objeto
+ * @param self Memoria reservada para este objeto
  */
 void Maquina_init(Maquina *self, Estado estadoInicial);
 

@@ -23,7 +23,9 @@ enum EventoSistema{
      */
     EV_NULO,
     /**
-     * @brief Reinicia la máquina de estado
+     * @brief Inicia o reinicia la máquina de estado. Establece
+     * como estado actual el estado inicial y luego envía el
+     * evento de reset a dicho estado.
      * 
      */
     EV_RESET,
@@ -52,7 +54,7 @@ struct Maquina{
         unsigned escrituras;
     }cola;
     Estado estadoInicial;
-    Estado estado;
+    Estado estadoActual;
 };
 
 

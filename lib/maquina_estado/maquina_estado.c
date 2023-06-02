@@ -4,14 +4,14 @@
 
 void Maquina_init(Maquina *self, Estado estadoInicial){
     self->estadoInicial = estadoInicial;
-    self->estado = NULL;
+    self->estadoActual = (Estado)0;
     self->cola.lecturas = 0;
     self->cola.escrituras = 0;
     Maquina_despacha(self, EV_RESET);
 }
 
 
-static bool Maquina__pEspacioDisponibleEnCola(Maquina const *self){
+static bool Maquina__qEspacioDisponibleEnCola(Maquina const *self){
     return (self->cola.escrituras - self->cola.lecturas) < MAX_EV_COLA;
 }
 
@@ -25,7 +25,7 @@ static void Maquina__insertaEventoEnCola(Maquina *self, Evento evento){
 bool Maquina_despacha(Maquina *self, Evento evento){
     bool hecho = false;
     __disable_irq();
-    if((EV_NULO != evento) && Maquina__pEspacioDisponibleEnCola(self)){
+    if((EV_NULO != evento) && Maquina__qEspacioDisponibleEnCola(self)){
         Maquina__insertaEventoEnCola(self,evento);
         hecho = true;
     }
@@ -33,13 +33,13 @@ bool Maquina_despacha(Maquina *self, Evento evento){
     return hecho;
 }
 
-static bool Maquina__pEventosDisponiblesEnCola(Maquina const *self){
+static bool Maquina__qEventosDisponiblesEnCola(Maquina const *self){
     return self->cola.escrituras != self->cola.lecturas;
 }
 
 static Evento Maquina_siguienteEvento(Maquina *self){
     Evento evento = EV_NULO;
-    if(Maquina__pEventosDisponiblesEnCola(self)){
+    if(Maquina__qEventosDisponiblesEnCola(self)){
         unsigned const posicion = (self->cola.lecturas) % MAX_EV_COLA;
         evento = self->cola.eventos[posicion];
         self->cola.lecturas++;
@@ -54,14 +54,14 @@ bool Maquina_procesa(Maquina *self){
     bool procesado = false;
     if (evento != EV_NULO){
         procesado = true;
-        if (evento == EV_RESET || !self->estado){
-            self->estado = self->estadoInicial;
+        if (evento == EV_RESET || !self->estadoActual){
+            self->estadoActual = self->estadoInicial;
         }
         
-        Resultado resultado = self->estado(self,evento);
+        Resultado resultado = self->estadoActual(self,evento);
         
         if (resultado.codigo == RES_TRANSICION){
-            self->estado = resultado.param;
+            self->estadoActual = resultado.nuevoEstado;
         }
     }
     return procesado;
