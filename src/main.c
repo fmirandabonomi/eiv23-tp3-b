@@ -235,7 +235,7 @@ void Pulsador_procesa(void){
         }
         if (nivelFlitrado != pulsador.estado.nivelAnterior){
             pulsador.estado.nivelAnterior = nivelFlitrado;
-            if (PULSADOR_NIVEL_NORMAL == nivelFlitrado){ // Pulsador liberado
+            if (PULSADOR_NIVEL_ACTIVO == nivelFlitrado){ // Pulsador presionado
                 Maquina_despacha(pulsador.destino,pulsador.evento);
             }
         }
