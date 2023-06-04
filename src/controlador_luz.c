@@ -5,15 +5,25 @@
 static Resultado estadoApagado(Maquina *ctx,Evento evento);
 static Resultado estadoEncendido(Maquina *ctx,Evento evento);
 
-void ControladorLuz_init(ControladorLuz *self, uint32_t tiempoOn, ControladorLuz_Acciones const *acciones){
+void ControladorLuz_init(ControladorLuz *self,uint32_t tiempoOn,SP_HPin pinLuz,bool nivelLuzOn,DespachoRetardado *despachoRetardado){
 
     Maquina_init(&self->maquina,estadoApagado);
     self->tiempoOn = tiempoOn;
-    self->acciones = acciones;
+    self->interfazLuz.pin=pinLuz;
+    self->interfazLuz.nivelOn=nivelLuzOn;
+    self->despachoRetardado = despachoRetardado;
 }
 
 Maquina * ControladorLuz_asMaquina(ControladorLuz *self){
     return &self->maquina;
+}
+
+static void ControladorLuz__apagaLuz(ControladorLuz *self){
+    SP_Pin_write(self->interfazLuz.pin,!self->interfazLuz.nivelOn);
+}
+
+static void ControladorLuz__enciendeLuz(ControladorLuz *self){
+    SP_Pin_write(self->interfazLuz.pin,self->interfazLuz.nivelOn);
 }
 
 static Resultado estadoApagado(Maquina *ctx,Evento evento){
@@ -21,11 +31,13 @@ static Resultado estadoApagado(Maquina *ctx,Evento evento){
     Resultado r = {0};
     switch (evento){
     case EV_RESET:
-        self->acciones->apagaLuz();
+        SP_Pin_setModo(self->interfazLuz.pin,SP_PIN_ENTRADA);
+        ControladorLuz__apagaLuz(self);
+        SP_Pin_setModo(self->interfazLuz.pin,SP_PIN_SALIDA);
         r.codigo = RES_PROCESADO;
     break; case EV_BOTON_PULSADO:
-        self->acciones->enciendeLuz();
-        self->acciones->despachaLuegoDeTiempo(ctx,EV_TIMEOUT,self->tiempoOn);
+        ControladorLuz__enciendeLuz(self);
+        DespachoRetardado_programa(self->despachoRetardado,ctx,EV_TIMEOUT,self->tiempoOn);
         r.codigo = RES_TRANSICION;
         r.nuevoEstado = estadoEncendido;
     break;default:
@@ -39,7 +51,7 @@ static Resultado estadoEncendido(Maquina *ctx,Evento evento){
     Resultado r = {0};
     switch (evento){
     break; case EV_TIMEOUT:
-        self->acciones->apagaLuz();
+        ControladorLuz__apagaLuz(self);
         r.codigo = RES_TRANSICION;
         r.nuevoEstado = estadoApagado;
     break;default:

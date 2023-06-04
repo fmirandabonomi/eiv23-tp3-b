@@ -40,50 +40,16 @@ int main(void){
 
 
 
-/**
- * @brief Configura los pines
- * 
- */
-static void setupPines(void);
-/**
- * @brief Enciende la luz
- * 
- */
-static void luzOn(void);
-/**
- * @brief Apaga la luz
- * 
- */
-static void luzOff(void);
-
-/**
- * @brief Llama a despacho retardado en la instancia
- * despachoRetardado en particular
- * 
- * @param destino 
- * @param evento 
- * @param tiempoMilisegundos 
- */
-static void DespachoRetardado_programa_bound(Maquina *const destino, Evento const evento, uint32_t const tiempoMilisegundos);
-
 static void setup(void){
-    static ControladorLuz_Acciones const accionesControladorLuz ={
-        .apagaLuz               = luzOff,
-        .enciendeLuz            = luzOn,
-        .despachaLuegoDeTiempo  = DespachoRetardado_programa_bound 
-    };
-
     static ControladorLuz instanciaControlador;
     
     SP_init();
     
-    setupPines();
-    
     DespachoRetardado_init(despachoRetardado);
 
-    ControladorLuz_init(&instanciaControlador,TIEMPO_ON,&accionesControladorLuz);
+    ControladorLuz_init(&instanciaControlador,TIEMPO_ON,PIN_LUZ,LUZ_ON,despachoRetardado);
     controlador = ControladorLuz_asMaquina(&instanciaControlador);
-    Maquina_procesa(controlador); // Inicializa
+    Maquina_procesa(controlador); // Reset inicializa pin con luz apagada
 
     Pulsador_init(pulsador, 
                   controlador,
@@ -92,26 +58,3 @@ static void setup(void){
                   PULSADOR_NIVEL_ACTIVO,
                   HISTERESIS_ANTIRREBOTE);
 }
-
-
-
-
-
-static void setupPines(void){
-    SP_Pin_setModo(PIN_LUZ,SP_PIN_ENTRADA);
-    SP_Pin_write(PIN_LUZ,!LUZ_ON);
-    SP_Pin_setModo(PIN_LUZ,SP_PIN_SALIDA);
-}
-
-static void luzOn(void){
-    SP_Pin_write(PIN_LUZ,LUZ_ON);
-}
-static void luzOff(void){
-    SP_Pin_write(PIN_LUZ,!LUZ_ON);
-}
-static void DespachoRetardado_programa_bound(Maquina *const destino, Evento const evento, uint32_t const tiempoMilisegundos){
-    DespachoRetardado_programa(despachoRetardado,destino,evento,tiempoMilisegundos);
-}
-
-
-
