@@ -12,10 +12,15 @@ void Pulsador_init(Pulsador *self,
     self->estado.nivelAnterior = !nivelActivo;
     if (nivelActivo == false){
         self->estado.contador = self->parametros.histeresis;
+        SP_Pin_setModo(pin,SP_PIN_ENTRADA_PULLUP);
+    }else{
+        self->estado.contador = 0;
+        SP_Pin_setModo(pin,SP_PIN_ENTRADA_PULLDN);
     }
     self->parametros.pin = pin;
     self->parametros.nivelActivo = nivelActivo;
     self->parametros.histeresis = histeresis;
+    self->t0 = SP_Tiempo_getMilisegundos();
 }
 
 void Pulsador_procesa(Pulsador *self){
