@@ -1,5 +1,4 @@
 #include "controlador_luz.h"
-#include "accion_despacha_evento.h"
 #include <maquina_estado_impl.h>
 
 static Resultado estadoApagado(Maquina *ctx,Evento evento);
