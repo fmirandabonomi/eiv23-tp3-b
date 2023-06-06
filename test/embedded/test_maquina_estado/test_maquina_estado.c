@@ -1,7 +1,6 @@
 #include <unity.h>
 #include <soporte_placa.h>
 #include "maquina_prueba.h"
-#include "accion_despacha_evento.h"
 
 static Maquina m;
 
@@ -137,32 +136,6 @@ static void test_parametro_contexto_es_puntero_a_maquina(void){
     TEST_ASSERT_EQUAL(1,contadores.accion9);
  }
 
- static void test_accion_despacha_evento(void){
-    AccionDespachaEvento d;
-
-    Maquina_procesa(&m);
-    TEST_ASSERT_FALSE(Maquina_procesa(&m));
-
-    AccionDespachaEvento_init(&d,EV_E1,&m);
-
-    IAccion *a = AccionDespachaEvento_asIAccion(&d);
-    TEST_ASSERT_EQUAL(ED_NO_DESPACHADO, AccionDespachaEvento_getEstadoDespacho(&d));
-
-    IAccion_ejecuta(a);
-    TEST_ASSERT_EQUAL(ED_DESPACHADO,AccionDespachaEvento_getEstadoDespacho(&d));
-
-    AccionDespachaEvento_deInit(&d);
-
-    TEST_ASSERT_EQUAL(ED_NO_INICIALIZADO,AccionDespachaEvento_getEstadoDespacho(&d));
-    IAccion_ejecuta(a);
-    
-
-    TEST_ASSERT_TRUE(Maquina_procesa(&m));
-    TEST_ASSERT_FALSE(Maquina_procesa(&m));
-
-    TEST_ASSERT_EQUAL(1,contadores.accion1);
-
- }
 
 int main(void){
     SP_init();
@@ -174,7 +147,6 @@ int main(void){
     RUN_TEST(test_maquina_de_prueba_soporta_transicion_de_estado);
     RUN_TEST(test_parametro_contexto_es_puntero_a_maquina);
     RUN_TEST(test_todas_las_transiciones_tres_estados);
-    RUN_TEST(test_accion_despacha_evento);
     UNITY_END();
     return 0;
 }

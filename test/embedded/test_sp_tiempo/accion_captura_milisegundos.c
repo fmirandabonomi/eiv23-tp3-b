@@ -4,27 +4,16 @@
 #include <soporte_placa.h>
 
 static void CapturaMilisegundos_ejecutar(IAccion *accion);
-struct IAccion_VT const accion_VT ={
-    .ejecutar = CapturaMilisegundos_ejecutar
-};
-
-
-static void CapturaMilisegundos_ejecutar(IAccion *accion){
-    CapturaMilisegundos *self = container_of(accion,CapturaMilisegundos,accion);
-    if(self && !self->capturado){
-        self->captura = SP_Tiempo_getMilisegundos() - self->captura;
-        self->capturado = true;
-    }
-}
-
 
 void CapturaMilisegundos_init(CapturaMilisegundos *self,uint32_t valorInicial){
     if (self){
-        self->accion._vptr = &accion_VT;
+        self->accion.ejecutar = CapturaMilisegundos_ejecutar;
         self->captura = valorInicial;
         self->capturado = false;
     }
 }
+
+
 IAccion *CapturaMilisegundos_getAccionCaptura(CapturaMilisegundos *self){
     IAccion *r = NULL;
     if(self){
@@ -45,4 +34,13 @@ uint32_t CapturaMilisegundos_getValor(CapturaMilisegundos *self){
         r = self->captura;
     }
     return r;
+}
+
+
+static void CapturaMilisegundos_ejecutar(IAccion *accion){
+    CapturaMilisegundos *self = container_of(accion,CapturaMilisegundos,accion);
+    if(self && !self->capturado){
+        self->captura = SP_Tiempo_getMilisegundos() - self->captura;
+        self->capturado = true;
+    }
 }
