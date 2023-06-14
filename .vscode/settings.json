@@ -4,6 +4,10 @@
         "unity_internals.h": "c",
         "sp_pin.h": "c",
         "stm32f1xx.h": "c",
-        "accion_captura_milisegundos.h": "c"
+        "accion_captura_milisegundos.h": "c",
+        "controlador_luz.h": "c",
+        "maquina_estado_impl.h": "c",
+        "maquina_estado.h": "c",
+        "accion_despacha_evento.h": "c"
     }
 }

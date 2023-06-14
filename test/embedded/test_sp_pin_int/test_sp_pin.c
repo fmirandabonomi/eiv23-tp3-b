@@ -15,9 +15,9 @@ static void resetContadores(void){
 }
 
 void setUp(void){
-    SP_Pin_setModo(PIN1,SP_PIN_SALIDA);
-    SP_Pin_setModo(PIN1b,SP_PIN_SALIDA);
-    SP_Pin_setModo(PIN2,SP_PIN_SALIDA);
+    SP_Pin_setModo(PIN1,SP_PIN_MODO_SALIDA);
+    SP_Pin_setModo(PIN1b,SP_PIN_MODO_SALIDA);
+    SP_Pin_setModo(PIN2,SP_PIN_MODO_SALIDA);
     SP_Pin_write(PIN1,0);
     SP_Pin_write(PIN1b,0);
     SP_Pin_write(PIN2,0);

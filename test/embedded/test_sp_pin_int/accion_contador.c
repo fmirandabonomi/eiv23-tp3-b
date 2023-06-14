@@ -4,13 +4,9 @@
 
 static void Contador_accionIncrementaCuenta(IAccion *accion);
 
-static IAccion_VT const accion_VT = {
-    .ejecutar = Contador_accionIncrementaCuenta
-};
-
 void Contador_init(Contador *self){
     if(self){
-        self->accion._vptr=&accion_VT;
+        self->accion.ejecutar=&Contador_accionIncrementaCuenta;
         self->cuenta=0;
     }
 }

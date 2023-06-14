@@ -129,59 +129,59 @@ void tearDown(void){
 
 static void test_config_salida(void){
     TEST_ASSERT_TRUE(PinPrueba_qEsEntradaFlotante());
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_SALIDA);
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_SALIDA);
     TEST_ASSERT_TRUE(PinPrueba_qEsSalidaPushPull());
 }
 
 static void test_config_salidaOpenDrain(void){
     TEST_ASSERT_TRUE(PinPrueba_qEsEntradaFlotante());
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_SALIDA_OPEN_DRAIN);
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_SALIDA_OPEN_DRAIN);
     TEST_ASSERT_TRUE(PinPrueba_qEsSalidaOpenDrain());
 }
 static void test_config_entrada(void){
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_SALIDA); // Verificado en otra prueba
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_ENTRADA);
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_SALIDA); // Verificado en otra prueba
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_ENTRADA);
     TEST_ASSERT_TRUE(PinPrueba_qEsEntradaFlotante());
 }
 
 static void test_config_entradaPullUp(void){
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_SALIDA); // Verificado en otra prueba
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_ENTRADA_PULLUP);
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_SALIDA); // Verificado en otra prueba
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_ENTRADA_PULLUP);
     TEST_ASSERT_TRUE(PinPrueba_qEsEntradaPullUp());
 }
 
-static void test_SP_Pin_setModo__SP_PIN_ENTRADA_PULLDN__DEBE_configurar_pin_como_ENTRADA_con_PULL_DOWN_INTERNO(void){
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_SALIDA); // Verificado en otra prueba
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_ENTRADA_PULLDN);
+static void test_SP_Pin_setModo__SP_PIN_MODO_ENTRADA_PULLDN__DEBE_configurar_pin_como_ENTRADA_con_PULL_DOWN_INTERNO(void){
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_SALIDA); // Verificado en otra prueba
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_ENTRADA_PULLDN);
     TEST_ASSERT_TRUE(PinPrueba_qEsEntradaPullDown());
 }
 
 static void test_SP_Pin_write__TRUE__DEBE_establecer_pin_en_ALTO(void){
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_SALIDA); // Verificado en otra prueba
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_SALIDA); // Verificado en otra prueba
     TEST_ASSERT_EQUAL(0,PinPrueba_qEstadoOdr());
     SP_Pin_write(HPIN_PRUEBA,1);
     TEST_ASSERT_EQUAL(1,PinPrueba_qEstadoOdr());
 }
 
 static void test_SP_Pin_write__FALSE__DEBE_establecer_pin_en_BAJO(void){
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_SALIDA); // Verificado en otra prueba
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_SALIDA); // Verificado en otra prueba
     SP_Pin_write(HPIN_PRUEBA,1);               // Verificado en otra prueba
     SP_Pin_write(HPIN_PRUEBA,0);
     TEST_ASSERT_EQUAL(0,PinPrueba_qEstadoOdr());
 }
 
 static void test_SP_Pin_read__DEBE_retornar_TRUE_si_la_entrada_es_ALTA(void){
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_SALIDA);      // Verificado en otra prueba
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_SALIDA);      // Verificado en otra prueba
     SP_Pin_write(HPIN_PRUEBA,1);                    // Verificado en otra prueba
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_ENTRADA);     // Verificado en otra prueba
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_ENTRADA);     // Verificado en otra prueba
     SP_Pin_write(HPIN_PRUEBA,0);                    // Verificado en otra prueba
     TEST_ASSERT_EQUAL(1,SP_Pin_read(HPIN_PRUEBA));
 }
 
 static void test_SP_Pin_read__DEBE_retornar_FALSE_si_la_entrada_es_BAJA(void){
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_SALIDA);      // Verificado en otra prueba
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_SALIDA);      // Verificado en otra prueba
     SP_Pin_write(HPIN_PRUEBA,0);                    // Verificado en otra prueba
-    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_ENTRADA);     // Verificado en otra prueba
+    SP_Pin_setModo(HPIN_PRUEBA,SP_PIN_MODO_ENTRADA);     // Verificado en otra prueba
     SP_Pin_write(HPIN_PRUEBA,1);                    // Verificado en otra prueba
     TEST_ASSERT_EQUAL(0,SP_Pin_read(HPIN_PRUEBA));
 }
@@ -191,13 +191,13 @@ static void test_los_pines_asociados_a_JTAG__DEBEN_ser_desasociados_al_configura
     static size_t const NUM_PINES_JTAG = sizeof(pinesJtag)/sizeof(*pinesJtag);
     for(size_t i=0;i<NUM_PINES_JTAG;++i){
         SP_HPin const hPin = pinesJtag[i];
-        SP_Pin_setModo(hPin,SP_PIN_SALIDA);
+        SP_Pin_setModo(hPin,SP_PIN_MODO_SALIDA);
         SP_Pin_write(hPin,0);
-        SP_Pin_setModo(hPin,SP_PIN_ENTRADA);
+        SP_Pin_setModo(hPin,SP_PIN_MODO_ENTRADA);
         bool const valor_0 = SP_Pin_read(hPin);
-        SP_Pin_setModo(hPin,SP_PIN_SALIDA);
+        SP_Pin_setModo(hPin,SP_PIN_MODO_SALIDA);
         SP_Pin_write(hPin,1);
-        SP_Pin_setModo(hPin,SP_PIN_ENTRADA);
+        SP_Pin_setModo(hPin,SP_PIN_MODO_ENTRADA);
         bool const valor_1 = SP_Pin_read(hPin);
         TEST_ASSERT_FALSE(valor_0);
         TEST_ASSERT_TRUE(valor_1);
@@ -215,7 +215,7 @@ int main(void){
     RUN_TEST(test_config_salidaOpenDrain);
     RUN_TEST(test_config_entrada);
     RUN_TEST(test_config_entradaPullUp);
-    RUN_TEST(test_SP_Pin_setModo__SP_PIN_ENTRADA_PULLDN__DEBE_configurar_pin_como_ENTRADA_con_PULL_DOWN_INTERNO);
+    RUN_TEST(test_SP_Pin_setModo__SP_PIN_MODO_ENTRADA_PULLDN__DEBE_configurar_pin_como_ENTRADA_con_PULL_DOWN_INTERNO);
     RUN_TEST(test_SP_Pin_write__FALSE__DEBE_establecer_pin_en_BAJO);
     RUN_TEST(test_SP_Pin_write__TRUE__DEBE_establecer_pin_en_ALTO);
     RUN_TEST(test_SP_Pin_read__DEBE_retornar_TRUE_si_la_entrada_es_ALTA);
