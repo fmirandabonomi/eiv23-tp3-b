@@ -8,8 +8,8 @@
 
 int main(void){
     SP_init();
-    SP_Pin_setModo(SP_PB9,SP_PIN_ENTRADA_PULLUP);
-    SP_Pin_setModo(SP_PIN_LED,SP_PIN_SALIDA);
+    SP_Pin_setModo(SP_PB9,SP_PIN_MODO_ENTRADA_PULLUP);
+    SP_Pin_setModo(SP_PIN_LED,SP_PIN_MODO_SALIDA);
     SP_Pin_write(SP_PIN_LED,LUZ_OFF);
     for (;;){
         while(SP_Pin_read(SP_PB9) != PULSADOR_ACTIVO);

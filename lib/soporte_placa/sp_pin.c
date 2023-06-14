@@ -131,17 +131,17 @@ void SP_Pin_setModo(SP_HPin hPin,SP_Pin_Modo modo){
     if (pin->init_especial) pin->init_especial();
     switch (modo)
     {
-    case SP_PIN_ENTRADA:
+    case SP_PIN_MODO_ENTRADA:
         config_modo(pin,ENTRADA_FLOTANTE);
-    break;case SP_PIN_ENTRADA_PULLUP:
+    break;case SP_PIN_MODO_ENTRADA_PULLUP:
         config_modo(pin,ENTRADA_PULLUP_PULLDN);
         SP_Pin_write(hPin,1);
-    break;case SP_PIN_ENTRADA_PULLDN:
+    break;case SP_PIN_MODO_ENTRADA_PULLDN:
         config_modo(pin,ENTRADA_PULLUP_PULLDN);
         SP_Pin_write(hPin,0);
-    break;case SP_PIN_SALIDA:
+    break;case SP_PIN_MODO_SALIDA:
         config_modo(pin,SALIDA_2MHz);
-    break;case SP_PIN_SALIDA_OPEN_DRAIN:
+    break;case SP_PIN_MODO_SALIDA_OPEN_DRAIN:
         config_modo(pin,SALIDA_2MHz_OPEN_DRAIN);
     break;default:
     // Debiera generar un error

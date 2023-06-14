@@ -62,11 +62,11 @@ typedef unsigned SP_HPin;
  * 
  */
 typedef enum SP_Pin_Modo{
-    SP_PIN_ENTRADA,          // Entrada flotante
-    SP_PIN_ENTRADA_PULLUP,   // Entrada con resistencia pull-up interna
-    SP_PIN_ENTRADA_PULLDN,   // Entrada con resistencia pull-down interna
-    SP_PIN_SALIDA,           // Salida push-pull
-    SP_PIN_SALIDA_OPEN_DRAIN // Salida con drenador abierto
+    SP_PIN_MODO_ENTRADA,          // Entrada flotante
+    SP_PIN_MODO_ENTRADA_PULLUP,   // Entrada con resistencia pull-up interna
+    SP_PIN_MODO_ENTRADA_PULLDN,   // Entrada con resistencia pull-down interna
+    SP_PIN_MODO_SALIDA,           // Salida push-pull
+    SP_PIN_MODO_SALIDA_OPEN_DRAIN // Salida con drenador abierto
 }SP_Pin_Modo;
 
 
@@ -111,7 +111,7 @@ void SP_Pin_write(SP_HPin hPin, bool valor);
  * es efectuada desde una rutina de servicio de interrupción y por lo tanto
  * es ejecutada en modo HANDLER.
  * 
- * Es necesario eliminar la configuración original con resetInterrupción antes
+ * Es necesario elimiPINnar la configuración original con resetInterrupción antes
  * de crear una nueva para la misma línea EXTI
  * 
  * @param hPin Handle al objeto Pin
