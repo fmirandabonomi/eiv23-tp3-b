@@ -211,7 +211,14 @@ static void SP_PinExti_configAfio_(SP_PinExti const *self){
 
     AFIO->EXTICR[NUM_REGISTRO] = (AFIO->EXTICR[NUM_REGISTRO] & ~MASCARA_CFG) | VALOR_CFG;
     
-    RCC->APB2ENR &= ~RCC_APB2ENR_AFIOEN;
+    /* Fuerza lectura del registro para dar tiempo a que termine la configuración de AFIO antes
+     * de apagar el reloj.
+     */
+    uint32_t volatile valor = 0;
+    valor =  AFIO->EXTICR[NUM_REGISTRO];
+    (void) valor;
+
+    RCC->APB2ENR &= ~RCC_APB2ENR_AFIOEN; 
 }
 
 static void SP_PinExti_configExti_(SP_PinExti const *self, SP_Pin_IntFlanco flanco){
@@ -276,7 +283,7 @@ bool SP_Pin_setInterrupcion(SP_HPin hPin,SP_Pin_IntFlanco flanco,IAccion *accion
             SP_PinExti_configura_(pin,flanco);
         }
     }
-    __enable_irq();
+    __enable_irq();   
     return configurado;
 }
 

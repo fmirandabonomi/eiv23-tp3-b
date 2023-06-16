@@ -50,6 +50,12 @@ static Pin const pines[SP_NUM_PINES] = {
 static void desactivarJtag(void){
     RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
     AFIO->MAPR = (AFIO->MAPR & ~(AFIO_MAPR_SWJ_CFG_Msk)) | AFIO_MAPR_SWJ_CFG_JTAGDISABLE;
+    
+    /* Fuerza lectura de MAPR para dar tiempo a que AFIO se configure antes de detener su reloj */
+    uint32_t volatile valor = 0;
+    valor = AFIO->MAPR;
+    (void)valor;
+
     RCC->APB2ENR &= ~RCC_APB2ENR_AFIOEN;
 }
 
@@ -62,10 +68,6 @@ static void desactivarJtag(void){
 static Pin const * pinDeHandle(SP_HPin hPin){
     return &pines[hPin];
 }
-/**
- * @brief Calcula la posición en del bit de habilitación
- * del puerto en APB2_ENR a partir de su dirección en memoria.
- */
 
 /**
  * @brief Habilita el reloj de un puerto GPIO
